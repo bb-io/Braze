@@ -1,8 +1,8 @@
-using Apps.Appname.Connections;
+using Apps.Braze.Connections;
 using Blackbird.Applications.Sdk.Common.Authentication;
-using Tests.Appname.Base;
+using Tests.Braze.Base;
 
-namespace Tests.Appname;
+namespace Tests.Braze;
 
 [TestClass]
 public class ConnectionValidatorTests : TestBase

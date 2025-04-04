@@ -1,8 +1,8 @@
-﻿using Apps.Appname.Handlers;
+using Apps.Braze.Handlers;
 using Blackbird.Applications.Sdk.Common.Dynamic;
-using Tests.Appname.Base;
+using Tests.Braze.Base;
 
-namespace Tests.Appname;
+namespace Tests.Braze;
 
 [TestClass]
 public class HandlerTests : TestBase

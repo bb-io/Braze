@@ -1,9 +1,9 @@
-﻿using Apps.Appname.Api;
+using Apps.Braze.Api;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
 using RestSharp;
 
-namespace Apps.Appname.Connections;
+namespace Apps.Braze.Connections;
 
 public class ConnectionValidator: IConnectionValidator
 {

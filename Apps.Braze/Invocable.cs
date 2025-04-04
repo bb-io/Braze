@@ -1,9 +1,9 @@
-using Apps.Appname.Api;
+using Apps.Braze.Api;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
-namespace Apps.Appname;
+namespace Apps.Braze;
 
 public class Invocable : BaseInvocable
 {

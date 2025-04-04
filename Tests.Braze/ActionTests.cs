@@ -1,7 +1,7 @@
-﻿using Apps.Appname.Actions;
-using Tests.Appname.Base;
+using Apps.Braze.Actions;
+using Tests.Braze.Base;
 
-namespace Tests.Appname;
+namespace Tests.Braze;
 
 [TestClass]
 public class ActionTests : TestBase
