@@ -2,5 +2,6 @@ namespace Apps.Braze.Constants;
 
 public static class CredsNames
 {
-    public const string Token = "token";
+    public const string BaseUrl = "base_url";
+    public const string Key = "key";
 }

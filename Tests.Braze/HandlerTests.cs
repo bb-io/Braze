@@ -8,9 +8,9 @@ namespace Tests.Braze;
 public class HandlerTests : TestBase
 {
     [TestMethod]
-    public async Task Dynamic_handler_works()
+    public async Task Campaign_handler_works()
     {
-        var handler = new DynamicHandler(InvocationContext);
+        var handler = new CampaignDataHandler(InvocationContext);
 
         var result = await handler.GetDataAsync(new DataSourceContext { }, CancellationToken.None);
 

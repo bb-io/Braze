@@ -15,7 +15,7 @@ public class ConnectionValidator: IConnectionValidator
         {
             var client = new Client(authenticationCredentialsProviders);
 
-            await client.ExecuteWithErrorHandling(new RestRequest());
+            await client.ExecuteWithErrorHandling(new RestRequest("/campaigns/list"));
 
             return new()
             {
