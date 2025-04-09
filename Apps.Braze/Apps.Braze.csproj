@@ -4,7 +4,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Product>Braze</Product>
+        <Product>Braze [Beta]</Product>
         <Description>Braze is a customer engagement platform that helps brands deliver personalized, real-time messaging across channels like email, mobile, SMS, and web.</Description>
         <Version>1.0.0</Version>
         <AssemblyName>Apps.Braze</AssemblyName>
