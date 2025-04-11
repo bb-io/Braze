@@ -20,8 +20,4 @@
         <EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Models\EmailTemplates\" />
-    </ItemGroup>
-
 </Project>
