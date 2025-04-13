@@ -20,7 +20,7 @@ namespace Apps.Braze.Actions;
 public class EmailTemplateActions(InvocationContext invocationContext) : Invocable(invocationContext)
 {
     [Action("Add translation tags to email template", Description = "Goes through the email template and adds the required {% translation } tags.")]
-    public async Task<string> AddTranslationTagsToEmailTemplate([ActionParameter] EmailTemplateRequest input)
+    public async Task AddTranslationTagsToEmailTemplate([ActionParameter] EmailTemplateRequest input)
     {
         var request = new RestRequest("/templates/email/info");
         request.AddQueryParameter("email_template_id", input.EmailTemplateId);
@@ -29,8 +29,13 @@ public class EmailTemplateActions(InvocationContext invocationContext) : Invocab
 
         var newBody = TranslationTagService.AddTranslationTags(result.Body);
 
-        var reslt = newBody == result.Body;
+        var updateRequest = new RestRequest("/templates/email/update", Method.Post);
+        updateRequest.AddJsonBody(new
+        {
+            email_template_id = input.EmailTemplateId,
+            body = newBody,
+        });
 
-        return newBody;
+        await Client.ExecuteWithErrorHandling(updateRequest);
     }
 }

@@ -26,6 +26,7 @@ public static class TranslationTagService
         // - Block-level
         // - Don't contain nested block-level tags
         // - Don't already contain a {% translation tag
+        // - Have any non empty text node descendants
         var nodes = doc.DocumentNode.Descendants()
             .Where(n =>
                 n.NodeType == HtmlNodeType.Element &&
@@ -33,7 +34,10 @@ public static class TranslationTagService
                 !n.Descendants().Any(d =>
                     d != n && d.NodeType == HtmlNodeType.Element && BlockTags.Contains(d.Name.ToLower())
                 ) &&
-                !n.InnerHtml.Contains("{% translation")
+                !n.InnerHtml.Contains("{% translation") &&
+                n.Descendants().Any(d =>
+                    d != n && d.NodeType == HtmlNodeType.Text && !string.IsNullOrWhiteSpace(d.InnerHtml)
+                )
             )
             .ToList();
 
