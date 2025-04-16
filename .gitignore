@@ -369,3 +369,4 @@ FodyWeavers.xsd
 */appsettings.json
 /Tests.Braze/TestFiles/Output
 /Tests.Braze/TestFiles/Input
+/Tests.Braze/appsettings.json

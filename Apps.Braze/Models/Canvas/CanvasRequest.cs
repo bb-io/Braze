@@ -1,0 +1,13 @@
+﻿using Apps.Braze.Handlers;
+using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dynamic;
+
+namespace Apps.Braze.Models.Canvas
+{
+    public class CanvasRequest
+    {
+        [Display("Canvas ID")]
+        [DataSource(typeof(CanvasDataHandler))]
+        public string CanvasId { get; set; }
+    }
+}
