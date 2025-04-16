@@ -1,5 +1,9 @@
+using Apps.Braze.Actions;
 using Apps.Braze.Handlers;
+using Apps.Braze.Models.Campaigns;
+using Apps.Braze.Models.Canvas;
 using Blackbird.Applications.Sdk.Common.Dynamic;
+using Newtonsoft.Json;
 using Tests.Braze.Base;
 
 namespace Tests.Braze;
@@ -38,4 +42,22 @@ public class HandlerTests : TestBase
 
         Assert.IsTrue(result.Count() > 0);
     }
+
+    [TestMethod]
+    public async Task Canvas_handler_works()
+    {
+        var handler = new CanvasDataHandler(InvocationContext);
+
+        var result = await handler.GetDataAsync(new DataSourceContext { }, CancellationToken.None);
+
+        Console.WriteLine($"Total: {result.Count()}");
+        foreach (var item in result)
+        {
+            Console.WriteLine($"{item.Value}: {item.DisplayName}");
+        }
+
+        Assert.IsTrue(result.Count() > 0);
+    }
+
+    
 }
