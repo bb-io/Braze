@@ -8,6 +8,6 @@ namespace Apps.Braze.Polling
     {
         [Display("Canvas ID")]
         [DataSource(typeof(CanvasDataHandler))]
-        public string? CanvasId { get; set; }
+        public string CanvasId { get; set; }
     }
 }
