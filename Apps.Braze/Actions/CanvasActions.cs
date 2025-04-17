@@ -17,7 +17,7 @@ namespace Apps.Braze.Actions
     [ActionList]
     public class CanvasActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : Invocable(invocationContext)
     {
-        [Action("Search canvas", Description = "Search through your canvases")]
+        [Action("Search canvases", Description = "Search through your canvases")]
         public async Task<CanvasListDto> SearchCanvas([ActionParameter] SearchCanvasRequest input)
         {
             var request = new RestRequest("/canvas/list");
@@ -36,7 +36,7 @@ namespace Apps.Braze.Actions
             return await Client.ExecuteWithErrorHandling<CanvasDetailsDto>(request);
         }
 
-        [Action("Download canvas message", Description = "Download the canvas message in both JSON and HTML formats.")]
+        [Action("Download canvas message", Description = "Download the canvas message in both JSON and HTML format")]
         public async Task<CanvasFileResponse> DownloadCanvasMessage([ActionParameter] CanvasMessageRequest input)
         {
             var request = new RestRequest("/canvas/translations");

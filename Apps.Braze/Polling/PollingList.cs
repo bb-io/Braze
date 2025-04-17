@@ -17,24 +17,24 @@ namespace Apps.Braze.Polling
         }
 
 
-        [PollingEvent("On canvas updated")]
+        [PollingEvent("On canvas updated", Description = "Triggers when a canvas is updated")]
         public Task<PollingEventResponse<DateMemory, PollingCanvasResponse>> OnCanvasUpdated(
             PollingEventRequest<DateMemory> request)
             => HandleCanvasUpdatedPolling(request);
 
-        [PollingEvent("On campaign updated")]
+        [PollingEvent("On campaign updated" , Description = "Triggers when a campaign is updated")]
         public Task<PollingEventResponse<DateMemory, PollingCampaignResponse>> OnCampaignUpdated(PollingEventRequest<DateMemory> request)
         {
             return HandleCampaignUpdatedPolling(request);
         }
 
-        [PollingEvent("On campaign message tag added")]
+        [PollingEvent("On campaign message tag added", Description = "Triggers when a campaign message tag is added")]
         public Task<PollingEventResponse<TagMemory, CampaignDto>> OnCampaignTagAdded(
             PollingEventRequest<TagMemory> request,
             [PollingEventParameter] PollingCampaignRequest input)
             => HandleCampaignTagPolling(request, input);
 
-        [PollingEvent("On canvas message tag added")]
+        [PollingEvent("On canvas message tag added", Description = "Triggers when a canvas message tag is added")]
         public Task<PollingEventResponse<TagMemory, CanvasDto>> OnCanvasTagAdded(
             PollingEventRequest<TagMemory> request,
             [PollingEventParameter] PollingCanvasRequest input)
