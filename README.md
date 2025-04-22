@@ -36,7 +36,7 @@ Before you can connect you need to make sure that:
 
 - **Add translation tags to email template** given an email template, automatically adds the {% localization id_x } tags around translatable content.
 
-### Canvas
+### Canvases
 
 - **Search canvases** returns a list of canvases. Searchable by last edited date.
 - **Get canvas** gets all details of a specific canvas
