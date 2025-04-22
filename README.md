@@ -50,6 +50,13 @@ Before you can connect you need to make sure that:
 - **On campaign message tag added** triggers when a campaign message tag is added
 - **On canvas message tag added** triggers when a canvas message tag is added
 
+
+## Example
+
+![example](Images/README/example.png)
+
+This workflow triggers whenever a campaign is updated in Braze. It automatically downloads the campaign message, creates a translation job in Phrase TMS, waits for the job to complete, pulls down the translated content, re?uploads the localized campaign back into Braze, and finally sends a Slack notification confirming that the translated campaign is live.
+
 ## Feedback
 
 Do you want to use this app or do you have feedback on our implementation? Reach out to us using the [established channels](https://www.blackbird.io/) or create an issue.
