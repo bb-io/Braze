@@ -55,7 +55,7 @@ Before you can connect you need to make sure that:
 
 ![example](Images/README/example.png)
 
-This workflow triggers whenever a campaign is updated in Braze. It automatically downloads the campaign message, creates a translation job in Phrase TMS, waits for the job to complete, pulls down the translated content, re?uploads the localized campaign back into Braze, and finally sends a Slack notification confirming that the translated campaign is live.
+This workflow triggers whenever a campaign is updated in Braze. It automatically downloads the campaign message, creates a translation job in Phrase TMS, waits for the job to complete, pulls down the translated content, uploads the localized campaign back into Braze, and finally sends a Slack notification confirming that the translated campaign is live.
 
 ## Feedback
 
