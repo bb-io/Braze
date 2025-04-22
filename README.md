@@ -36,7 +36,7 @@ Before you can connect you need to make sure that:
 
 - **Add translation tags to email template** given an email template, automatically adds the {% localization id_x } tags around translatable content.
 
-### Canvas
+### Canvases
 
 - **Search canvases** returns a list of canvases. Searchable by last edited date.
 - **Get canvas** gets all details of a specific canvas
@@ -49,6 +49,13 @@ Before you can connect you need to make sure that:
 - **On campaign updated**  triggers when a campaign is updated
 - **On campaign message tag added** triggers when a campaign message tag is added
 - **On canvas message tag added** triggers when a canvas message tag is added
+
+
+## Example
+
+![example](Images/README/example.png)
+
+This workflow triggers whenever a campaign is updated in Braze. It automatically downloads the campaign message, creates a translation job in Phrase TMS, waits for the job to complete, pulls down the translated content, uploads the localized campaign back into Braze, and finally sends a Slack notification confirming that the translated campaign is live.
 
 ## Feedback
 
