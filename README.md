@@ -34,7 +34,7 @@ Before you can connect you need to make sure that:
 - **Download campaign message** downloads the campaign message in both JSON and HTML formats. Use in conjunction with **Upload campaign message** after translation.
 - **Upload campaign message** uploads the campaign message content from a translated file. use in conjunction with **Download campaign message**.
 
-- **Add translation tags to email template** given an email template, automatically adds the {% localization id_x } tags around translatable content.
+- **Add translation tags to email template** given an email template, automatically adds the tags around translatable content.
 
 ### Canvases
 
