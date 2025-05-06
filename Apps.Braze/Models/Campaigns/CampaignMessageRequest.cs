@@ -17,6 +17,7 @@ public class CampaignMessageRequest
     public string CampaignId { get; set; }
 
     [Display("Message variation ID")]
+    [DataSource(typeof(MessageVariationDataHandler))]
     public string MessageVariationId { get; set; }
 
     [Display("Locale")]
