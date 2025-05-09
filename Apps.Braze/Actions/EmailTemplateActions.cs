@@ -38,4 +38,23 @@ public class EmailTemplateActions(InvocationContext invocationContext) : Invocab
 
         await Client.ExecuteWithErrorHandling(updateRequest);
     }
+
+    [Action("Add labels to email template", Description = "Adds Braze template labels to an email template.")]
+    public async Task AddTagsToEmailTemplate([ActionParameter] EmailTemplateRequest emailTemplate,
+        [ActionParameter] EmailTemplateTagsRequest tagsRequest)
+    {
+        if (string.IsNullOrWhiteSpace(emailTemplate.EmailTemplateId))
+            throw new PluginMisconfigurationException("Email template ID is required. Please check your input and try again");
+        if (tagsRequest.Tags == null || !tagsRequest.Tags.Any())
+            throw new PluginMisconfigurationException("At least one tag is required. Please check your input and try again");
+
+        var updateRequest = new RestRequest("/templates/email/update", Method.Post);
+        updateRequest.AddJsonBody(new
+        {
+            email_template_id = emailTemplate.EmailTemplateId,
+            tags = tagsRequest.Tags
+        });
+
+        await Client.ExecuteWithErrorHandling(updateRequest);
+    }
 }

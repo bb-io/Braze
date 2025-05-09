@@ -18,4 +18,13 @@ public class EmailTemplateActionTests : TestBase
         await actions.AddTranslationTagsToEmailTemplate(new EmailTemplateRequest { EmailTemplateId = "aec92c0b-f3ef-4bca-a61e-e42d96562334" });
     }
 
+    [TestMethod]
+    public async Task Add_tags_works()
+    {
+        var actions = new EmailTemplateActions(InvocationContext);
+        await actions.AddTagsToEmailTemplate(
+            new EmailTemplateRequest { EmailTemplateId = "8dc14a6c-0371-48de-ac18-efcf2ce0b7b5" },
+            new EmailTemplateTagsRequest { Tags = ["email","translate-email"] });
+    }
+
 }
