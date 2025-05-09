@@ -1,19 +1,17 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Apps.Braze.Dtos;
 public class EmailTemplateListDto
 {
-    public List<ListTemplate> Templates { get; set; }
+    [JsonProperty("count")]
+    public int Count { get; set; }
+
+    public IEnumerable<ListTemplate> Templates { get; set; }
 }
 
 public class ListTemplate
-{ 
+{
     [Display("Email template ID")]
     [JsonProperty("email_template_id")]
     public string Id { get; set; }
