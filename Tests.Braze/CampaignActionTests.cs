@@ -43,7 +43,7 @@ public class CampaignActionTests : TestBase
         var actions = new CampaignActions(InvocationContext, FileManager);
         var result = await actions.DownloadCampaignMessage(new CampaignMessageRequest 
         {
-            //CampaignId = "80fa4d32-60fa-497e-a0e4-dcc2db212baf",
+            CampaignId = "80fa4d32-60fa-497e-a0e4-dcc2db212baf",
             //MessageVariationId = "c4b245d3-446a-4e9e-8584-dde418305461",
             Locale = "en",
         });

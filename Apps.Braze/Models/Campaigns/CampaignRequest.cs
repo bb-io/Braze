@@ -7,5 +7,5 @@ public class CampaignRequest
 {
     [Display("Campaign ID")]
     [DataSource(typeof(CampaignDataHandler))]
-    public string? CampaignId { get; set; }
+    public string CampaignId { get; set; }
 }
