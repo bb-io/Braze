@@ -39,7 +39,7 @@ public class EmailTemplateActions(InvocationContext invocationContext) : Invocab
         await Client.ExecuteWithErrorHandling(updateRequest);
     }
 
-    [Action("Add labels to email template", Description = "Adds Braze template labels to an email template.")]
+    [Action("Add tags to email template", Description = "Adds Braze template labels to an email template.")]
     public async Task AddTagsToEmailTemplate([ActionParameter] EmailTemplateRequest emailTemplate,
         [ActionParameter] EmailTemplateTagsRequest tagsRequest)
     {
