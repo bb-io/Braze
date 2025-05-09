@@ -103,11 +103,22 @@ namespace Apps.Braze.Polling
                 };
             }
 
-            var newTags = currentTags.Except(request.Memory.KnownTags).ToArray();
+            var newTags = currentTags.Except(request.Memory.KnownTags, StringComparer.OrdinalIgnoreCase).ToArray();
+            if (input.Tags != null && input.Tags.Any())
+            {
+                var filterSet = input.Tags
+                    .Select(t => t.Trim())
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                newTags = newTags
+                    .Where(t => filterSet.Contains(t))
+                    .ToArray();
+            }
+
+            request.Memory.KnownTags = currentTags.ToList();
+
             if (newTags.Any())
             {
-                request.Memory.KnownTags = currentTags.ToList();
-
                 return new PollingEventResponse<TagMemory, CampaignDto>
                 {
                     FlyBird = true,

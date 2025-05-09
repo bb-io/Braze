@@ -62,12 +62,13 @@ namespace Tests.Braze
             {
                 Memory = new TagMemory
                 {
-                    KnownTags = new List<string> { "tag1", "tag2" }
+                    KnownTags = new List<string> { "tag1" }
                 }
             };
             var campaign = new PollingCampaignRequest
             {
-                CampaignId = "0336736f-6012-4957-9e60-abc3aebb1b00"
+                CampaignId = "0336736f-6012-4957-9e60-abc3aebb1b00",
+                Tags = new List<string> { "email" }
             };
 
             var response = polling.OnCampaignTagAdded(request, campaign);
