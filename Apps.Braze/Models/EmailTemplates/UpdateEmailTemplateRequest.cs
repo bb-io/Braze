@@ -1,4 +1,6 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using Apps.Braze.Handlers;
+using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Files;
 
 namespace Apps.Braze.Models.EmailTemplates
@@ -6,6 +8,7 @@ namespace Apps.Braze.Models.EmailTemplates
     public class UpdateEmailTemplateRequest
     {
         [Display("Email template ID")]
+        [DataSource(typeof(EmailTemplateDataHandler))]
         public string EmailTemplateId { get; set; }
 
         [Display("Template name")]
