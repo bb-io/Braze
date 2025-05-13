@@ -12,6 +12,7 @@ using System.Net.Mime;
 using System.Text;
 
 namespace Apps.Braze.Actions;
+[ActionList]
 public class EmailTemplateActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : Invocable(invocationContext)
 {
 
