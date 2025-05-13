@@ -63,6 +63,16 @@ Before you can connect you need to make sure that:
 - **Upload canvas message** uploads the canvas message content from a translated
   file
 
+### Email templates
+
+- **Search email templates** returns the email template metadata** Retrieves a list of email templates filtered by modification dates, limit, and offset
+- **Create email template** creates a new email template
+- **Get email template** retrieves information about an email template, including the body as HTML
+- **Add tags to email template** adds tags to an email template
+- **Remove tags from email template** removes tags from an email template
+- **Update email template** updates an email template
+- 
+
 ### Events
 
 - **On canvas updated** triggers when a canvas is updated

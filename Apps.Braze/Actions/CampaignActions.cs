@@ -41,9 +41,11 @@ public class CampaignActions(InvocationContext invocationContext, IFileManagemen
     [Action("Download campaign message", Description = "Download the campaign message in both JSON and HTML formats.")]
     public async Task<CampaignFileResponse> DownloadCampaignMessage([ActionParameter] CampaignMessageRequest input)
     {
-        var request = new RestRequest("/campaigns/translations");
+        var mid = await ResolveMessageVariationIdAsync(input.CampaignId, input.MessageVariationId);
+
+        var request = new RestRequest("/campaigns/translations", Method.Get);
         request.AddQueryParameter("campaign_id", input.CampaignId);
-        request.AddQueryParameter("message_variation_id", input.MessageVariationId);
+        request.AddQueryParameter("message_variation_id", mid);
         var result = await Client.ExecuteWithErrorHandling<TranslationsDto>(request);
         var localeVariant = result.Translations.FirstOrDefault(x => x.Locale.LocaleKey == input.Locale);
         if (localeVariant == null) throw new PluginMisconfigurationException($"The locale '{input.Locale}' is not present on this campaign message.");
@@ -51,7 +53,7 @@ public class CampaignActions(InvocationContext invocationContext, IFileManagemen
         var identifier = new CampaignMessageIdentifier
         {
             CampaignId = input.CampaignId,
-            MessageVariationId = input.MessageVariationId
+            MessageVariationId = mid
         };
 
         var jsonConverterService = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(MediaTypeNames.Application.Json, fileManagementClient);
@@ -76,6 +78,8 @@ public class CampaignActions(InvocationContext invocationContext, IFileManagemen
         var converter = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(input.File.ContentType, fileManagementClient);
         var (identifier, translationMap) = converter.FromFile(fileContent);
 
+        var mid = await ResolveMessageVariationIdAsync(input.CampaignId, input.MessageVariationId ?? identifier?.MessageVariationId);
+
         var request = new RestRequest("/campaigns/translations");
         request.AddQueryParameter("campaign_id", input.CampaignId ?? identifier?.CampaignId);
         request.AddQueryParameter("message_variation_id", input.MessageVariationId ?? identifier?.MessageVariationId);
@@ -88,11 +92,26 @@ public class CampaignActions(InvocationContext invocationContext, IFileManagemen
         updateRequest.AddJsonBody(new 
         { 
             campaign_id = input.CampaignId ?? identifier?.CampaignId,
-            message_variation_id = input.MessageVariationId ?? identifier?.MessageVariationId,
+            message_variation_id = mid,
             locale_id = localeVariant.Locale.Uuid,
             translation_map = translationMap
         });
 
         await Client.ExecuteWithErrorHandling(updateRequest);
+    }
+
+    private async Task<string> ResolveMessageVariationIdAsync(string campaignId, string? messageVariationId)
+    {
+        if (!string.IsNullOrWhiteSpace(messageVariationId))
+            return messageVariationId!;
+
+        var detailsReq = new RestRequest("/campaigns/details", Method.Get);
+        detailsReq.AddQueryParameter("campaign_id", campaignId);
+        var campaign = await Client.ExecuteWithErrorHandling<CampaignDto>(detailsReq);
+
+        var first = campaign.MessageVariations.FirstOrDefault();
+        if (first == null)
+            throw new PluginApplicationException($"No message variations found for campaign '{campaignId}'.");
+        return first.Id;
     }
 }
