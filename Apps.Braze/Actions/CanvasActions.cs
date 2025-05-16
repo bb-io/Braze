@@ -55,10 +55,10 @@ namespace Apps.Braze.Actions
                 StepId = input.StepId
             };
 
-            var jsonConverterService = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(MediaTypeNames.Application.Json, fileManagementClient);
+            var jsonConverterService = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(".json", fileManagementClient);
             var jsonFile = await jsonConverterService.ToFile(identifier, localeVariant.TranslationMap);
 
-            var htmlConverterService = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(MediaTypeNames.Text.Html, fileManagementClient);
+            var htmlConverterService = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(".html", fileManagementClient);
             var htmlFile = await htmlConverterService.ToFile(identifier, localeVariant.TranslationMap);
 
             return new CanvasFileResponse
@@ -73,8 +73,9 @@ namespace Apps.Braze.Actions
         {
             var file = await fileManagementClient.DownloadAsync(input.File);
             var fileContent = Encoding.UTF8.GetString(await file.GetByteData());
+            var fileExtension = Path.GetExtension(fileContent);
 
-            var converter = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(input.File.ContentType, fileManagementClient);
+            var converter = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(fileExtension, fileManagementClient);
             var (identifier, translationMap) = converter.FromFile(fileContent);
 
             var request = new RestRequest("/canvas/translations");
