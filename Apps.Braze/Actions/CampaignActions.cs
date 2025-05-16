@@ -56,10 +56,10 @@ public class CampaignActions(InvocationContext invocationContext, IFileManagemen
             MessageVariationId = mid
         };
 
-        var jsonConverterService = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(MediaTypeNames.Application.Json, fileManagementClient);
+        var jsonConverterService = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(".json", fileManagementClient);
         var jsonFile = await jsonConverterService.ToFile(identifier, localeVariant.TranslationMap);
 
-        var htmlConverterService = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(MediaTypeNames.Text.Html, fileManagementClient);
+        var htmlConverterService = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(".html", fileManagementClient);
         var htmlFile = await htmlConverterService.ToFile(identifier, localeVariant.TranslationMap);
 
         return new CampaignFileResponse
@@ -74,8 +74,9 @@ public class CampaignActions(InvocationContext invocationContext, IFileManagemen
     {
         var file = await fileManagementClient.DownloadAsync(input.File);
         var fileContent = Encoding.UTF8.GetString(await file.GetByteData());
+        var fileExtension = Path.GetExtension(input.File.Name);
 
-        var converter = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(input.File.ContentType, fileManagementClient);
+        var converter = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(fileExtension, fileManagementClient);
         var (identifier, translationMap) = converter.FromFile(fileContent);
 
         var mid = await ResolveMessageVariationIdAsync(input.CampaignId, input.MessageVariationId ?? identifier?.MessageVariationId);
