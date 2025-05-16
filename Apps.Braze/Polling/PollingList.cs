@@ -91,7 +91,6 @@ namespace Apps.Braze.Polling
             var rest = new RestRequest("/campaigns/details", Method.Get);
             rest.AddQueryParameter("campaign_id", input.CampaignId);
             var campaign = await Client.ExecuteWithErrorHandling<CampaignDto>(rest);
-
             var currentTags = campaign.Tags ?? new List<string>();
 
             if (request.Memory == null)
@@ -99,32 +98,29 @@ namespace Apps.Braze.Polling
                 return new PollingEventResponse<TagMemory, CampaignDto>
                 {
                     FlyBird = false,
-                    Memory = new TagMemory { KnownTags = currentTags.ToList() },
+                    Memory = new TagMemory { KnownTags = new List<string>() },
                     Result = campaign
                 };
             }
 
-            var memoryExcludingFilter = (input.Tags ?? Enumerable.Empty<string>())
-                .Aggregate(
-                    request.Memory.KnownTags,
-                    (mem, tag) => mem
-                        .Where(t => !t.Equals(tag, StringComparison.OrdinalIgnoreCase))
-                        .ToList()
-                );
+            var filterTags = input.Tags?.Select(t => t.Trim())
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var newTags = currentTags
-                .Except(memoryExcludingFilter, StringComparer.OrdinalIgnoreCase)
+            var knownSoFar = request.Memory.KnownTags
+                       .Where(t => currentTags
+                           .Contains(t, StringComparer.OrdinalIgnoreCase))
+                       .ToList();
+
+            IEnumerable<string> candidates = filterTags != null && filterTags.Any()
+                ? currentTags.Where(t => filterTags.Contains(t))
+                : currentTags;
+
+            var newTags = candidates
+                .Except(knownSoFar, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            if (input.Tags?.Any() == true)
-            {
-                var filterSet = new HashSet<string>(input.Tags, StringComparer.OrdinalIgnoreCase);
-                newTags = newTags
-                    .Where(t => filterSet.Contains(t))
-                    .ToList();
-            }
-
-            request.Memory.KnownTags = currentTags.ToList();
+            knownSoFar.AddRange(newTags);
+            request.Memory.KnownTags = knownSoFar;
 
             return new PollingEventResponse<TagMemory, CampaignDto>
             {

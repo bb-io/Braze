@@ -62,7 +62,7 @@ namespace Tests.Braze
             {
                 Memory = new TagMemory
                 {
-                    KnownTags = new List<string> { "tag1" }
+                    KnownTags = new List<string> { "tag1", "email_translate" }
                 }
             };
             var campaign = new PollingCampaignRequest
