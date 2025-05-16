@@ -12,12 +12,12 @@ using System.Threading.Tasks;
 namespace Apps.Braze.Services;
 public static class ConverterFactory<T> where T : IIdentifier
 {
-    public static IConverterService<T> CreateConverter(string mimeType, IFileManagementClient fileManagementClient)
+    public static IConverterService<T> CreateConverter(string fileExtension, IFileManagementClient fileManagementClient)
     {
-        if (mimeType == MediaTypeNames.Application.Json)
+        if (fileExtension.ToLower() == ".json")
             return new JsonConverterService<T>(fileManagementClient);
-        else if (mimeType == MediaTypeNames.Text.Html)
+        else if (fileExtension.ToLower() == ".html")
             return new HtmlConverterService<T>(fileManagementClient);
-        else throw new PluginMisconfigurationException($"The file type '{mimeType}' is not supported. Use a transformed file that was exported from the 'Download' action.");
+        else throw new PluginMisconfigurationException($"The file format {fileExtension} is not supported. Use a transformed file that was exported from the 'Download' action.");
     }
 }
