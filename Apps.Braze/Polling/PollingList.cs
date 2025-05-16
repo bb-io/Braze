@@ -99,38 +99,38 @@ namespace Apps.Braze.Polling
                 return new PollingEventResponse<TagMemory, CampaignDto>
                 {
                     FlyBird = false,
-                    Memory = new TagMemory { KnownTags = currentTags.ToList() }
-                };
-            }
-
-            var newTags = currentTags.Except(request.Memory.KnownTags, StringComparer.OrdinalIgnoreCase).ToArray();
-            if (input.Tags != null && input.Tags.Any())
-            {
-                var filterSet = input.Tags
-                    .Select(t => t.Trim())
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                newTags = newTags
-                    .Where(t => filterSet.Contains(t))
-                    .ToArray();
-            }
-
-            request.Memory.KnownTags = currentTags.ToList();
-
-            if (newTags.Any())
-            {
-                return new PollingEventResponse<TagMemory, CampaignDto>
-                {
-                    FlyBird = true,
-                    Memory = request.Memory,
+                    Memory = new TagMemory { KnownTags = currentTags.ToList() },
                     Result = campaign
                 };
             }
 
+            var memoryExcludingFilter = (input.Tags ?? Enumerable.Empty<string>())
+                .Aggregate(
+                    request.Memory.KnownTags,
+                    (mem, tag) => mem
+                        .Where(t => !t.Equals(tag, StringComparison.OrdinalIgnoreCase))
+                        .ToList()
+                );
+
+            var newTags = currentTags
+                .Except(memoryExcludingFilter, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (input.Tags?.Any() == true)
+            {
+                var filterSet = new HashSet<string>(input.Tags, StringComparer.OrdinalIgnoreCase);
+                newTags = newTags
+                    .Where(t => filterSet.Contains(t))
+                    .ToList();
+            }
+
+            request.Memory.KnownTags = currentTags.ToList();
+
             return new PollingEventResponse<TagMemory, CampaignDto>
             {
-                FlyBird = false,
-                Memory = request.Memory
+                FlyBird = newTags.Any(),
+                Memory = request.Memory,
+                Result = campaign
             };
         }
 

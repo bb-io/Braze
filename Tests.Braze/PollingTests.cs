@@ -67,8 +67,8 @@ namespace Tests.Braze
             };
             var campaign = new PollingCampaignRequest
             {
-                CampaignId = "0336736f-6012-4957-9e60-abc3aebb1b00",
-                Tags = new List<string> { "email" }
+                CampaignId = "5ae9bab4-000d-4da4-8025-a8a7e3a227ba",
+                Tags = new List<string> { "email_translate" }
             };
 
             var response = polling.OnCampaignTagAdded(request, campaign);
