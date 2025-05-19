@@ -62,13 +62,13 @@ namespace Tests.Braze
             {
                 Memory = new DateMemory
                 {
-                    LastInteractionDate = new DateTime(2025, 4, 28, 23, 59, 11, DateTimeKind.Utc)
+                    LastInteractionDate = new DateTime(2025, 5, 19, 13, 20, 11, DateTimeKind.Utc)
                 }
             };
             var campaign = new PollingCampaignRequest
             {
                 //CampaignId= "841280d5-3693-4ff1-b32b-039dd4407670"
-                Tags = new List<string> { "translate-email" }
+                Tags = new List<string> { "translate-email", "email" }
             };
 
             var response = polling.OnCampaignTagAdded(request, campaign);

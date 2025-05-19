@@ -111,7 +111,7 @@ namespace Apps.Braze.Polling
                 var requiredTags = new HashSet<string>(input.Tags, StringComparer.OrdinalIgnoreCase);
                 campaigns = campaigns
                     .Where(c => c.Tags != null
-                                && requiredTags.All(rt =>
+                                && requiredTags.Any(rt =>
                                     c.Tags.Any(t => string.Equals(t, rt, StringComparison.OrdinalIgnoreCase))))
                     .ToList();
             }
@@ -165,9 +165,6 @@ namespace Apps.Braze.Polling
                 Result = new PollingCampaignResponse(updated)
             };
         }
-
-
-
 
         private async Task<PollingEventResponse<DateMemory, PollingCanvasResponse>> HandleCanvasUpdatedPolling(
            PollingEventRequest<DateMemory> request)
