@@ -29,8 +29,8 @@ namespace Apps.Braze.Polling
         }
 
         [PollingEvent("On campaign message tag added", Description = "Triggers when a campaign message tag is added")]
-        public Task<PollingEventResponse<TagMemory, CampaignDto>> OnCampaignTagAdded(
-            PollingEventRequest<TagMemory> request,
+        public Task<PollingEventResponse<DateMemory, PollingCampaignResponse>> OnCampaignTagAdded(
+            PollingEventRequest<DateMemory> request,
             [PollingEventParameter] PollingCampaignRequest input)
             => HandleCampaignTagPolling(request, input);
 
@@ -84,58 +84,87 @@ namespace Apps.Braze.Polling
         }
 
 
-        private async Task<PollingEventResponse<TagMemory, CampaignDto>> HandleCampaignTagPolling(
-            PollingEventRequest<TagMemory> request,
+        private async Task<PollingEventResponse<DateMemory, PollingCampaignResponse>> HandleCampaignTagPolling(
+            PollingEventRequest<DateMemory> request,
             PollingCampaignRequest input)
         {
-            var rest = new RestRequest("/campaigns/details", Method.Get);
-            rest.AddQueryParameter("campaign_id", input.CampaignId);
-            var campaign = await Client.ExecuteWithErrorHandling<CampaignDto>(rest);
+            var restRequest = new RestRequest("/campaigns/list", Method.Get);
+            if (request.Memory != null)
+            {
+                restRequest.AddQueryParameter(
+                    "last_edit.time[gt]",
+                    request.Memory.LastInteractionDate.ToString("o"));
+            }
 
-            var currentTags = campaign.Tags ?? new List<string>();
+            var listResponse = await Client.ExecuteWithErrorHandling<CampaignListDto>(restRequest);
+            var campaigns = listResponse.Campaigns.ToList();
+
+            if (!string.IsNullOrEmpty(input.CampaignId))
+            {
+                campaigns = campaigns
+                    .Where(c => string.Equals(c.Id, input.CampaignId, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            if (input.Tags != null && input.Tags.Any())
+            {
+                var requiredTags = new HashSet<string>(input.Tags, StringComparer.OrdinalIgnoreCase);
+                campaigns = campaigns
+                    .Where(c => c.Tags != null
+                                && requiredTags.Any(rt =>
+                                    c.Tags.Any(t => string.Equals(t, rt, StringComparison.OrdinalIgnoreCase))))
+                    .ToList();
+            }
+
+            if (!campaigns.Any())
+            {
+                if (request.Memory == null)
+                {
+                    return new PollingEventResponse<DateMemory, PollingCampaignResponse>
+                    {
+                        FlyBird = false,
+                        Memory = new DateMemory { LastInteractionDate = DateTime.UtcNow }
+                    };
+                }
+
+                return new PollingEventResponse<DateMemory, PollingCampaignResponse>
+                {
+                    FlyBird = false,
+                    Memory = request.Memory
+                };
+            }
 
             if (request.Memory == null)
             {
-                return new PollingEventResponse<TagMemory, CampaignDto>
+                var maxDate = campaigns.Max(c => c.LastEdited);
+                return new PollingEventResponse<DateMemory, PollingCampaignResponse>
                 {
                     FlyBird = false,
-                    Memory = new TagMemory { KnownTags = currentTags.ToList() }
+                    Memory = new DateMemory { LastInteractionDate = maxDate }
                 };
             }
 
-            var newTags = currentTags.Except(request.Memory.KnownTags, StringComparer.OrdinalIgnoreCase).ToArray();
-            if (input.Tags != null && input.Tags.Any())
+            var updated = campaigns
+                .Where(c => c.LastEdited > request.Memory.LastInteractionDate)
+                .ToArray();
+
+            if (!updated.Any())
             {
-                var filterSet = input.Tags
-                    .Select(t => t.Trim())
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                newTags = newTags
-                    .Where(t => filterSet.Contains(t))
-                    .ToArray();
-            }
-
-            request.Memory.KnownTags = currentTags.ToList();
-
-            if (newTags.Any())
-            {
-                return new PollingEventResponse<TagMemory, CampaignDto>
+                return new PollingEventResponse<DateMemory, PollingCampaignResponse>
                 {
-                    FlyBird = true,
-                    Memory = request.Memory,
-                    Result = campaign
+                    FlyBird = false,
+                    Memory = request.Memory
                 };
             }
 
-            return new PollingEventResponse<TagMemory, CampaignDto>
+            request.Memory.LastInteractionDate = updated.Max(c => c.LastEdited);
+            return new PollingEventResponse<DateMemory, PollingCampaignResponse>
             {
-                FlyBird = false,
-                Memory = request.Memory
+                FlyBird = true,
+                Memory = request.Memory,
+                Result = new PollingCampaignResponse(updated)
             };
         }
-
-
-
 
         private async Task<PollingEventResponse<DateMemory, PollingCanvasResponse>> HandleCanvasUpdatedPolling(
            PollingEventRequest<DateMemory> request)

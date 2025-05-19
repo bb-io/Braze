@@ -8,9 +8,9 @@ namespace Apps.Braze.Polling
     {
         [Display("Campaign ID")]
         [DataSource(typeof(CampaignDataHandler))]
-        public string CampaignId { get; set; }
+        public string? CampaignId { get; set; }
 
         [Display("Filter by tags")]
-        public IEnumerable<string>? Tags { get; set; }
+        public IEnumerable<string> Tags { get; set; }
     }
 }
