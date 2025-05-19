@@ -2,6 +2,6 @@
 {
     public class TagMemory
     {
-        public IEnumerable<string> KnownTags { get; set; }
+        public IEnumerable<string> KnownTags { get; set; } = new List<string>();
     }
 }

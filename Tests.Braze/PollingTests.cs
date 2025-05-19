@@ -58,21 +58,21 @@ namespace Tests.Braze
         public async Task On_tags_update_campaign_working()
         {
             var polling = new PollingList(InvocationContext);
-            var request = new PollingEventRequest<TagMemory>
+            var request = new PollingEventRequest<DateMemory>
             {
-                Memory = new TagMemory
+                Memory = new DateMemory
                 {
-                    KnownTags = new List<string> { "tag1", "email_translate" }
+                    LastInteractionDate = new DateTime(2025, 4, 28, 23, 59, 11, DateTimeKind.Utc)
                 }
             };
             var campaign = new PollingCampaignRequest
             {
-                CampaignId = "5ae9bab4-000d-4da4-8025-a8a7e3a227ba",
-                Tags = new List<string> { "email_translate" }
+                //CampaignId= "841280d5-3693-4ff1-b32b-039dd4407670"
+                Tags = new List<string> { "translate-email" }
             };
 
             var response = polling.OnCampaignTagAdded(request, campaign);
-            var campaigntags = response.Result.Result.Tags;
+            var campaigntags = response.Result.Result.Campaigns;
             foreach (var tags in campaigntags)
             {
                 Console.WriteLine($"{tags}");
