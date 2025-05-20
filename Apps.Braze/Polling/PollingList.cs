@@ -34,6 +34,12 @@ namespace Apps.Braze.Polling
             [PollingEventParameter] PollingCampaignRequest input)
             => HandleCampaignTagPolling(request, input);
 
+        [PollingEvent("On email template tag added", Description = "Triggers when a email template tag is added")]
+        public Task<PollingEventResponse<DateMemory, PollingEmailTemplateResponse>> OnEmailTemplateTagAdded(
+            PollingEventRequest<DateMemory> request,
+            [PollingEventParameter] PollingEmailTemplateRequest input)
+            => HandleEmailTemplateTagPolling(request, input);
+
         [PollingEvent("On canvas message tag added", Description = "Triggers when a canvas message tag is added")]
         public Task<PollingEventResponse<TagMemory, CanvasDto>> OnCanvasTagAdded(
             PollingEventRequest<TagMemory> request,
@@ -163,6 +169,89 @@ namespace Apps.Braze.Polling
                 FlyBird = true,
                 Memory = request.Memory,
                 Result = new PollingCampaignResponse(updated)
+            };
+        }
+
+
+        private async Task<PollingEventResponse<DateMemory, PollingEmailTemplateResponse>> HandleEmailTemplateTagPolling(
+            PollingEventRequest<DateMemory> request,
+            PollingEmailTemplateRequest input)
+        {
+            var restRequest = new RestRequest("/templates/email/list");
+            if (request.Memory != null)
+            {
+                restRequest.AddQueryParameter(
+                    "modified_after",
+                    request.Memory.LastInteractionDate.ToString("o"));
+            }
+
+            var listResponse = await Client.ExecuteWithErrorHandling<EmailTemplateListDto>(restRequest);
+            var templates = listResponse.Templates.ToList();
+
+            if (!string.IsNullOrEmpty(input.EmailTemplateId))
+            {
+                templates = templates
+                    .Where(c => string.Equals(c.Id, input.EmailTemplateId, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            if (input.Tags != null && input.Tags.Any())
+            {
+                var requiredTags = new HashSet<string>(input.Tags, StringComparer.OrdinalIgnoreCase);
+                templates = templates
+                    .Where(c => c.Tags != null
+                                && requiredTags.Any(rt =>
+                                    c.Tags.Any(t => string.Equals(t, rt, StringComparison.OrdinalIgnoreCase))))
+                    .ToList();
+            }
+
+            if (!templates.Any())
+            {
+                if (request.Memory == null)
+                {
+                    return new PollingEventResponse<DateMemory, PollingEmailTemplateResponse>
+                    {
+                        FlyBird = false,
+                        Memory = new DateMemory { LastInteractionDate = DateTime.UtcNow }
+                    };
+                }
+
+                return new PollingEventResponse<DateMemory, PollingEmailTemplateResponse>
+                {
+                    FlyBird = false,
+                    Memory = request.Memory
+                };
+            }
+
+            if (request.Memory == null)
+            {
+                var maxDate = templates.Max(c => c.UpdatedAt);
+                return new PollingEventResponse<DateMemory, PollingEmailTemplateResponse>
+                {
+                    FlyBird = false,
+                    Memory = new DateMemory { LastInteractionDate = maxDate }
+                };
+            }
+
+            var updated = templates
+                .Where(c => c.UpdatedAt > request.Memory.LastInteractionDate)
+                .ToArray();
+
+            if (!updated.Any())
+            {
+                return new PollingEventResponse<DateMemory, PollingEmailTemplateResponse>
+                {
+                    FlyBird = false,
+                    Memory = request.Memory
+                };
+            }
+
+            request.Memory.LastInteractionDate = updated.Max(c => c.UpdatedAt);
+            return new PollingEventResponse<DateMemory, PollingEmailTemplateResponse>
+            {
+                FlyBird = true,
+                Memory = request.Memory,
+                Result = new PollingEmailTemplateResponse(updated)
             };
         }
 
