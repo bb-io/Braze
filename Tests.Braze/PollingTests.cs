@@ -106,5 +106,32 @@ namespace Tests.Braze
 
             Assert.IsNotNull(response);
         }
+
+
+        [TestMethod]
+        public async Task On_tags_update_email_template_working()
+        {
+            var polling = new PollingList(InvocationContext);
+            var request = new PollingEventRequest<DateMemory>
+            {
+                Memory = new DateMemory
+                {
+                    LastInteractionDate = new DateTime(2025, 5, 19, 13, 20, 11, DateTimeKind.Utc)
+                }
+            };
+            var campaign = new PollingEmailTemplateRequest
+            {
+                Tags = new List<string> { "translate-email", "email" }
+            };
+
+            var response = polling.OnEmailTemplateTagAdded(request, campaign);
+            var templtaetags = response.Result.Result.Templates;
+            foreach (var tags in templtaetags)
+            {
+                Console.WriteLine($"{tags.Name} - {tags.Id}");
+            }
+
+            Assert.IsNotNull(response);
+        }
     }
 }
