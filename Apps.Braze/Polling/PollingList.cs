@@ -41,51 +41,103 @@ namespace Apps.Braze.Polling
             => HandleEmailTemplateTagPolling(request, input);
 
         [PollingEvent("On canvas message tag added", Description = "Triggers when a canvas message tag is added")]
-        public Task<PollingEventResponse<TagMemory, CanvasDto>> OnCanvasTagAdded(
-            PollingEventRequest<TagMemory> request,
+        public Task<PollingEventResponse<DateMemory, CanvasListDto>> OnCanvasTagAdded(
+            PollingEventRequest<DateMemory> request,
             [PollingEventParameter] PollingCanvasRequest input)
             => HandleCanvasTagPolling(request, input);
 
 
 
-        private async Task<PollingEventResponse<TagMemory, CanvasDto>> HandleCanvasTagPolling(
-           PollingEventRequest<TagMemory> request,
-           [PollingEventParameter]PollingCanvasRequest input)
+        private async Task<PollingEventResponse<DateMemory, CanvasListDto>> HandleCanvasTagPolling(
+           PollingEventRequest<DateMemory> request,
+           PollingCanvasRequest input)
         {
-            var rest = new RestRequest("/canvas/details", Method.Get);
-            rest.AddQueryParameter("canvas_id", input.CanvasId);
-            var canvas = await Client.ExecuteWithErrorHandling<CanvasDto>(rest);
+            var rest = new RestRequest("/canvas/list", Method.Get);
+            if (request.Memory != null)
+            {
+                rest.AddQueryParameter(
+                    "last_edit.time[gt]",
+                    request.Memory.LastInteractionDate.ToString("o"));
+            }
 
-            var currentTags = canvas.Tags ?? new List<string>();
+            var listResponse = await Client.ExecuteWithErrorHandling<CanvasListDto>(rest);
+            var canvases = listResponse.Canvases.ToList();
 
-         
+            if (!string.IsNullOrEmpty(input.CanvasId))
+            {
+                canvases = canvases
+                    .Where(c => string.Equals(c.Id, input.CanvasId, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            if (input.Tags != null && input.Tags.Any())
+            {
+                var required = new HashSet<string>(input.Tags, StringComparer.OrdinalIgnoreCase);
+                canvases = canvases
+                    .Where(c => c.Tags != null
+                                && required.Any(rt => c.Tags.Any(t =>
+                                    string.Equals(t, rt, StringComparison.OrdinalIgnoreCase))))
+                    .ToList();
+            }
+
+            if (!canvases.Any())
+            {
+                if (request.Memory == null)
+                {
+                    return new PollingEventResponse<DateMemory, CanvasListDto>
+                    {
+                        FlyBird = false,
+                        Memory = new DateMemory
+                        {
+                            LastInteractionDate = DateTime.UtcNow
+                        }
+                    };
+                }
+
+                return new PollingEventResponse<DateMemory, CanvasListDto>
+                {
+                    FlyBird = false,
+                    Memory = request.Memory
+                };
+            }
 
             if (request.Memory == null)
             {
-                return new PollingEventResponse<TagMemory, CanvasDto>
+                var maxDate = canvases.Max(c => c.LastEdited);
+                return new PollingEventResponse<DateMemory, CanvasListDto>
                 {
                     FlyBird = false,
-                    Memory = new TagMemory { KnownTags = currentTags }
+                    Memory = new DateMemory
+                    {
+                        LastInteractionDate = maxDate
+                    }
                 };
             }
 
-            var newTags = currentTags.Except(request.Memory.KnownTags).ToArray();
-            if (newTags.Any())
-            {
-                request.Memory.KnownTags = currentTags;
+            var updated = canvases
+                .Where(c => c.LastEdited > request.Memory.LastInteractionDate)
+                .ToList();
 
-                return new PollingEventResponse<TagMemory, CanvasDto>
+            if (!updated.Any())
+            {
+                return new PollingEventResponse<DateMemory, CanvasListDto>
                 {
-                    FlyBird = true,
-                    Memory = request.Memory,
-                    Result = canvas
+                    FlyBird = false,
+                    Memory = request.Memory
                 };
             }
 
-            return new PollingEventResponse<TagMemory, CanvasDto>
+            var newMax = updated.Max(c => c.LastEdited);
+            request.Memory.LastInteractionDate = newMax;
+
+            return new PollingEventResponse<DateMemory, CanvasListDto>
             {
-                FlyBird = false,
-                Memory = request.Memory
+                FlyBird = true,
+                Memory = request.Memory,
+                Result = new CanvasListDto
+                {
+                    Canvases = updated
+                }
             };
         }
 
