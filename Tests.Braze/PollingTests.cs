@@ -85,23 +85,23 @@ namespace Tests.Braze
         public async Task On_tags_update_canvas_working()
         {
             var polling = new PollingList(InvocationContext);
-            var request = new PollingEventRequest<TagMemory>
+            var request = new PollingEventRequest<DateMemory>
             {
-                Memory = new TagMemory
+                Memory = new DateMemory
                 {
-                    KnownTags = new List<string> { "tag1", "tag2" }
+                    LastInteractionDate = new DateTime(2025, 5, 19, 13, 20, 11, DateTimeKind.Utc)
                 }
             };
             var canvas = new PollingCanvasRequest
             {
-                CanvasId = "762d1c20-2728-452e-985d-c49ebe31e3ae"
+                Tags = new List<string> { "translate-email", "email" }
             };
 
             var response = polling.OnCanvasTagAdded(request, canvas);
-            var campaigntags = response.Result.Result.Tags;
+            var campaigntags = response.Result.Result.Canvases;
             foreach (var tags in campaigntags)
             {
-                Console.WriteLine($"{tags}");
+                Console.WriteLine($"{tags.Name} - {tags.Id}");
             }
 
             Assert.IsNotNull(response);

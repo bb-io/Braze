@@ -8,6 +8,9 @@ namespace Apps.Braze.Polling
     {
         [Display("Canvas ID")]
         [DataSource(typeof(CanvasDataHandler))]
-        public string CanvasId { get; set; }
+        public string? CanvasId { get; set; }
+
+        [Display("Filter by tags")]
+        public IEnumerable<string> Tags { get; set; }
     }
 }
