@@ -73,7 +73,7 @@ namespace Apps.Braze.Actions
         {
             var file = await fileManagementClient.DownloadAsync(input.File);
             var fileContent = Encoding.UTF8.GetString(await file.GetByteData());
-            var fileExtension = Path.GetExtension(fileContent);
+            var fileExtension = Path.GetExtension(input.File.Name);
 
             var converter = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(fileExtension, fileManagementClient);
             var (identifier, translationMap) = converter.FromFile(fileContent);
