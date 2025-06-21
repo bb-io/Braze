@@ -71,7 +71,7 @@ Before you can connect you need to make sure that:
 - **Add tags to email template** adds tags to an email template
 - **Remove tags from email template** removes tags from an email template
 - **Update email template** updates an email template
-- 
+
 
 ### Events
 
@@ -79,6 +79,7 @@ Before you can connect you need to make sure that:
 - **On campaign updated** triggers when a campaign is updated
 - **On campaign message tag added** triggers when a campaign message tag is
   added
+- **On campaign message translation added or updated** triggers when a campaign message translation is added or updated. If a message hasn't been updated in over a year, this event will trigger again for that message. Please note: if the translation update results in a duplicate translation ID error from the `/campaigns/translations` API, the event will not be triggered
 - **On canvas message tag added** triggers when a canvas message tag is added
 
 ## Example

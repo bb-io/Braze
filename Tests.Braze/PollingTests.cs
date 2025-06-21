@@ -82,6 +82,32 @@ namespace Tests.Braze
         }
 
         [TestMethod]
+        public async Task On_campaign_message_content_updated_working()
+        {
+            var polling = new PollingList(InvocationContext);
+            var request = new PollingEventRequest<CampaignMessageMemory>
+            {
+                Memory = new CampaignMessageMemory
+                {
+                    LastInteractionDate = new DateTime(2025, 5, 5, 10, 50, 0, DateTimeKind.Utc),
+                    CampaignMessages = new Dictionary<string, DateTime>()
+                    {
+                        { "083EC4E6FA1F4321D1874EBFC8E8F99E7B31016D5F55ACBCE205A876FA7B6A9C3174DE8185C64551BD3E7EFBB70D3C1F813661EFF108F50AA182D45C36E1B410", new DateTime(2025, 6, 21, 10, 52, 22, DateTimeKind.Utc) },
+                        { "record-older-than-a-year-should-be-deleted-on-polling", new DateTime(2023, 6, 21, 10, 52, 22, DateTimeKind.Utc) }
+                    }
+                }
+            };
+            var campaign = new PollingCampaignMessageContentRequest
+            {
+                Tags = new List<string> { "email", "translate-email", "email_translate" },
+                Locale = "en",
+            };
+
+            var response = await polling.OnCampaignMessageContentUpdated(request, campaign);
+            Assert.IsNotNull(response);
+        }
+
+        [TestMethod]
         public async Task On_tags_update_canvas_working()
         {
             var polling = new PollingList(InvocationContext);
