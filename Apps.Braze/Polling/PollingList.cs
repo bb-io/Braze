@@ -1,11 +1,15 @@
 ﻿using Apps.Braze.Dtos;
+using Apps.Braze.Models.Campaigns;
 using Apps.Braze.Models.Canvas;
+using Apps.Braze.Models.General;
 using Apps.Braze.Polling.Memory;
-using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
+using Newtonsoft.Json;
 using RestSharp;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Apps.Braze.Polling
 {
@@ -33,6 +37,12 @@ namespace Apps.Braze.Polling
             PollingEventRequest<DateMemory> request,
             [PollingEventParameter] PollingCampaignRequest input)
             => HandleCampaignTagPolling(request, input);
+
+        [PollingEvent("On campaign message translation added or updated", Description = "Triggers when a campaign message is updated")]
+        public Task<PollingEventResponse<CampaignMessageMemory, PollingCampaignMessageContentResponse>> OnCampaignMessageContentUpdated(
+            PollingEventRequest<CampaignMessageMemory> request,
+            [PollingEventParameter] PollingCampaignMessageContentRequest input)
+            => HandleCampaignMessageContentPolling(request, input);
 
         [PollingEvent("On email template tag added", Description = "Triggers when a email template tag is added")]
         public Task<PollingEventResponse<DateMemory, PollingEmailTemplateResponse>> OnEmailTemplateTagAdded(
@@ -221,6 +231,141 @@ namespace Apps.Braze.Polling
                 FlyBird = true,
                 Memory = request.Memory,
                 Result = new PollingCampaignResponse(updated)
+            };
+        }
+
+
+        private async Task<PollingEventResponse<CampaignMessageMemory, PollingCampaignMessageContentResponse>> HandleCampaignMessageContentPolling(
+            PollingEventRequest<CampaignMessageMemory> request,
+            PollingCampaignMessageContentRequest input)
+        {
+            var restRequest = new RestRequest("/campaigns/list", Method.Get);
+            if (request.Memory != null)
+                restRequest.AddQueryParameter("last_edit.time[gt]", request.Memory.LastInteractionDate.ToString("o"));
+
+            var response = await Client.ExecuteWithErrorHandling<CampaignListDto>(restRequest);
+            var campaigns = response.Campaigns.ToList();
+
+            if (input.Tags != null && input.Tags.Any())
+            {
+                var requiredTags = new HashSet<string>(input.Tags, StringComparer.OrdinalIgnoreCase);
+                campaigns = campaigns
+                    .Where(c => c.Tags?.Intersect(requiredTags, StringComparer.OrdinalIgnoreCase).Any() ?? false)
+                    .ToList();
+            }
+
+            if (campaigns.Count == 0)
+            {
+                var memory = request.Memory ?? new CampaignMessageMemory { LastInteractionDate = DateTime.UtcNow };
+
+                return new PollingEventResponse<CampaignMessageMemory, PollingCampaignMessageContentResponse>
+                {
+                    FlyBird = false,
+                    Memory = memory
+                };
+            }
+
+            // This is a first run: initialize memory and return early
+            if (request.Memory == null)
+            {
+                var maxDate = campaigns.Max(c => c.LastEdited);
+                return new PollingEventResponse<CampaignMessageMemory, PollingCampaignMessageContentResponse>
+                {
+                    FlyBird = false,
+                    Memory = new CampaignMessageMemory { LastInteractionDate = maxDate }
+                };
+            }
+
+            var updatedCampaigns = campaigns
+                .Where(c => c.LastEdited > request.Memory.LastInteractionDate)
+                .ToList();
+
+            if (updatedCampaigns.Count == 0)
+            {
+                return new PollingEventResponse<CampaignMessageMemory, PollingCampaignMessageContentResponse>
+                {
+                    FlyBird = false,
+                    Memory = request.Memory
+                };
+            }
+
+            var updatedMessages = new List<ListCampaignMessageDto>();
+            var lastInteractionDate = updatedCampaigns.Max(c => c.LastEdited);
+            var currentTime = DateTime.UtcNow;
+
+            // For each updated campaign, fetch translations, convert to json and hash that json
+            // Event will fly only with messages that are not already in memory by comparing their hashes
+            foreach (var campaign in updatedCampaigns)
+            {
+                var campaignRequest = new RestRequest("/campaigns/details");
+                campaignRequest.AddQueryParameter("campaign_id", campaign.Id);
+                var campaignDetails = await Client.ExecuteWithErrorHandling<CampaignDto>(campaignRequest);
+
+                foreach (var message in campaignDetails.MessageVariations)
+                {
+                    var translationRequest = new RestRequest("/campaigns/translations", Method.Get);
+                    translationRequest.AddQueryParameter("campaign_id", campaign.Id);
+                    translationRequest.AddQueryParameter("message_variation_id", message.Id);
+
+                    TranslationsDto translationResponse;
+                    try
+                    {
+                        translationResponse = await Client.ExecuteWithErrorHandling<TranslationsDto>(translationRequest);
+                    }
+                    catch (PluginApplicationException ex)
+                    when (ex.Message.Contains("This message does not have multi-language setup")
+                        || ex.Message.Contains("Duplicate translation IDs"))
+                    {
+                        continue;
+                    }
+
+                    var localeVariant = translationResponse.Translations.FirstOrDefault(x => x.Locale.LocaleKey == input.Locale);
+                    if (localeVariant == null)
+                    {
+                        continue;
+                    }
+
+                    var identifier = new CampaignMessageIdentifier
+                    {
+                        CampaignId = campaign.Id,
+                        MessageVariationId = message.Id
+                    };
+
+                    var representation = new JsonFileRepresentation<CampaignMessageIdentifier> { Meta = identifier, TranslationMap = localeVariant.TranslationMap };
+                    var messageJson = JsonConvert.SerializeObject(representation, Formatting.Indented);
+                    var messageJsonBytes = Encoding.UTF8.GetBytes(messageJson);
+
+                    var messageHash = SHA512.HashData(messageJsonBytes);
+                    var messageHex = Convert.ToHexString(messageHash);
+
+                    if (request.Memory.CampaignMessages.TryAdd(messageHex, currentTime))
+                    {
+                        var messageForList = new MessageListDto
+                        {
+                            Id = message.Id,
+                            Name = message.Name,
+                            Channel = message.Channel,
+                        };
+                        updatedMessages.Add(new ListCampaignMessageDto { Message = messageForList, Campaign = campaign });
+                    }  
+                }
+            }
+
+            // Remove messages older than a year from memory
+            foreach (var memorizedMessage in request.Memory.CampaignMessages)
+            {
+                if (memorizedMessage.Value.AddYears(1) < currentTime)
+                {
+                    request.Memory.CampaignMessages.Remove(memorizedMessage.Key);
+                }
+            }
+
+            request.Memory.LastInteractionDate = lastInteractionDate;
+            return new PollingEventResponse<CampaignMessageMemory, PollingCampaignMessageContentResponse>
+            {
+                FlyBird = true,
+                Memory = request.Memory,
+                Result = new PollingCampaignMessageContentResponse(updatedMessages)
             };
         }
 
