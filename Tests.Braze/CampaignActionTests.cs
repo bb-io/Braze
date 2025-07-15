@@ -32,7 +32,7 @@ public class CampaignActionTests : TestBase
     public async Task Get_campaign_works()
     {
         var actions = new CampaignActions(InvocationContext, FileManager);
-        var result = await actions.GetCampaign(new CampaignRequest { /*CampaignId = "80fa4d32-60fa-497e-a0e4-dcc2db212baf"*/ });
+        var result = await actions.GetCampaign(new CampaignRequest { CampaignId = "7d41c34e-0669-45e5-9ad1-28c80af8a2d7" });
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
         Assert.IsTrue(result.MessageVariations.Count() > 0);
     }

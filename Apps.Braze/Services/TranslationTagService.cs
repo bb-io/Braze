@@ -15,6 +15,16 @@ public static class TranslationTagService
         "pre", "section", "table", "tfoot", "ul", "video", "tr", "td"
     };
 
+    public static string TrimEmptyHtml(this string str) => string.IsNullOrEmpty(str)
+    ? str
+    : str
+        .Replace("&nbsp;", string.Empty)
+        .Replace("&zwnj;", string.Empty)
+        .Replace("\\n", string.Empty)
+        .Replace('\u034f', ' ')
+        .Replace('\u200c', ' ')
+        .Trim();
+
     public static string AddTranslationTags(string originalHtml)
     {
         var segmentCounter = 1;
@@ -36,7 +46,9 @@ public static class TranslationTagService
                 ) &&
                 !n.InnerHtml.Contains("{% translation") &&
                 n.Descendants().Any(d =>
-                    d != n && d.NodeType == HtmlNodeType.Text && !string.IsNullOrWhiteSpace(d.InnerHtml)
+                    d != n
+                    && d.NodeType == HtmlNodeType.Text
+                    && !string.IsNullOrEmpty(d.InnerHtml.TrimEmptyHtml())
                 )
             )
             .ToList();
