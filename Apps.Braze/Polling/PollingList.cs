@@ -8,6 +8,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
 using Newtonsoft.Json;
 using RestSharp;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -156,20 +157,42 @@ namespace Apps.Braze.Polling
             PollingEventRequest<DateMemory> request,
             PollingCampaignRequest input)
         {
-            var restRequest = new RestRequest("/campaigns/list", Method.Get);
-            if (request.Memory != null)
+            var allCampaigns = new List<ListCampaign>();
+            int page = 0;
+            bool hasMore = true;
+
+            while (hasMore)
             {
-                restRequest.AddQueryParameter(
-                    "last_edit.time[gt]",
-                    request.Memory.LastInteractionDate.ToString("o"));
+                var restRequest = new RestRequest("/campaigns/list", Method.Get);
+                restRequest.AddQueryParameter("page", page.ToString());
+
+                if (request.Memory != null)
+                {
+                    restRequest.AddQueryParameter(
+                        "last_edit.time[gt]",
+                        request.Memory.LastInteractionDate.ToString("o"));
+                }
+
+                var listResponse = await Client.ExecuteWithErrorHandling<CampaignListDto>(restRequest);
+                var campaigns = listResponse.Campaigns.ToList();
+
+                if (campaigns.Any())
+                {
+                    allCampaigns.AddRange(campaigns);
+                    page++;
+                }
+                else
+                {
+                    hasMore = false;
+                }
             }
 
-            var listResponse = await Client.ExecuteWithErrorHandling<CampaignListDto>(restRequest);
-            var campaigns = listResponse.Campaigns.ToList();
+            var json = JsonConvert.SerializeObject(allCampaigns, Formatting.Indented);
+            Console.WriteLine($"Fetched {allCampaigns.Count} campaigns: {json}");
 
             if (!string.IsNullOrEmpty(input.CampaignId))
             {
-                campaigns = campaigns
+                allCampaigns = allCampaigns
                     .Where(c => string.Equals(c.Id, input.CampaignId, StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
@@ -177,14 +200,14 @@ namespace Apps.Braze.Polling
             if (input.Tags != null && input.Tags.Any())
             {
                 var requiredTags = new HashSet<string>(input.Tags, StringComparer.OrdinalIgnoreCase);
-                campaigns = campaigns
+                allCampaigns = allCampaigns
                     .Where(c => c.Tags != null
                                 && requiredTags.Any(rt =>
                                     c.Tags.Any(t => string.Equals(t, rt, StringComparison.OrdinalIgnoreCase))))
                     .ToList();
             }
 
-            if (!campaigns.Any())
+            if (!allCampaigns.Any())
             {
                 if (request.Memory == null)
                 {
@@ -204,7 +227,7 @@ namespace Apps.Braze.Polling
 
             if (request.Memory == null)
             {
-                var maxDate = campaigns.Max(c => c.LastEdited);
+                var maxDate = allCampaigns.Max(c => c.LastEdited);
                 return new PollingEventResponse<DateMemory, PollingCampaignResponse>
                 {
                     FlyBird = false,
@@ -212,7 +235,7 @@ namespace Apps.Braze.Polling
                 };
             }
 
-            var updated = campaigns
+            var updated = allCampaigns
                 .Where(c => c.LastEdited > request.Memory.LastInteractionDate)
                 .ToArray();
 

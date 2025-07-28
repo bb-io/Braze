@@ -140,7 +140,8 @@ public class EmailTemplateActions(InvocationContext invocationContext, IFileMana
     }
 
     [Action("Add translation tags to email template", Description = "Goes through the email template and adds the required {% translation } tags.")]
-    public async Task AddTranslationTagsToEmailTemplate([ActionParameter] EmailTemplateRequest input)
+    public async Task AddTranslationTagsToEmailTemplate([ActionParameter] EmailTemplateRequest input,
+        [ActionParameter] IEnumerable<string> filters)
     {
         var request = new RestRequest("/templates/email/info");
         request.AddQueryParameter("email_template_id", input.EmailTemplateId);

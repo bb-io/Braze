@@ -1,6 +1,7 @@
 ﻿using Apps.Braze.Polling;
 using Apps.Braze.Polling.Memory;
 using Blackbird.Applications.Sdk.Common.Polling;
+using Newtonsoft.Json;
 using Tests.Braze.Base;
 
 namespace Tests.Braze
@@ -62,7 +63,7 @@ namespace Tests.Braze
             {
                 Memory = new DateMemory
                 {
-                    LastInteractionDate = new DateTime(2025, 5, 19, 13, 20, 11, DateTimeKind.Utc)
+                    LastInteractionDate = new DateTime(2025, 6, 26, 13, 20, 11, DateTimeKind.Utc)
                 }
             };
             var campaign = new PollingCampaignRequest
@@ -71,13 +72,10 @@ namespace Tests.Braze
                 Tags = new List<string> { "translate-email", "email" }
             };
 
-            var response = polling.OnCampaignTagAdded(request, campaign);
-            var campaigntags = response.Result.Result.Campaigns;
-            foreach (var tags in campaigntags)
-            {
-                Console.WriteLine($"{tags}");
-            }
+            var response = await polling.OnCampaignTagAdded(request, campaign);
 
+            var json = JsonConvert.SerializeObject(response, Formatting.Indented );
+            Console.WriteLine(json);
             Assert.IsNotNull(response);
         }
 
