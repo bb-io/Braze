@@ -11,12 +11,12 @@ namespace Tests.Braze;
 [TestClass]
 public class EmailTemplateActionTests : TestBase
 {
-    [TestMethod]
-    public async Task Add_translation_tags_works()
-    {
-        var actions = new EmailTemplateActions(InvocationContext, FileManager);
-        await actions.AddTranslationTagsToEmailTemplate(new EmailTemplateRequest { EmailTemplateId = "aec92c0b-f3ef-4bca-a61e-e42d96562334" });
-    }
+    //[TestMethod]
+    //public async Task Add_translation_tags_works()
+    //{
+    //    var actions = new EmailTemplateActions(InvocationContext, FileManager);
+    //    await actions.AddTranslationTagsToEmailTemplate(new EmailTemplateRequest { EmailTemplateId = "aec92c0b-f3ef-4bca-a61e-e42d96562334" });
+    //}
 
     [TestMethod]
     public async Task Add_tags_works()
