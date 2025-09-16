@@ -101,7 +101,7 @@ public class CampaignActions(InvocationContext invocationContext, IFileManagemen
         await Client.ExecuteWithErrorHandling(updateRequest);
     }
 
-    private async Task<string> ResolveMessageVariationIdAsync(string campaignId, string? messageVariationId)
+    public async Task<string> ResolveMessageVariationIdAsync(string campaignId, string? messageVariationId)
     {
         if (!string.IsNullOrWhiteSpace(messageVariationId))
             return messageVariationId!;
