@@ -13,12 +13,12 @@ namespace Apps.Braze.Polling
     public class ContentPollingList(InvocationContext invocationContext) : Invocable(invocationContext)
     {
         [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdatedMultiple)]
-        [PollingEvent("On content updated",Description = "Triggers with a list of campaigns and canvases updated")]
+        [PollingEvent("On content updated", Description = "Triggers with a list of campaigns and canvases updated")]
         public Task<PollingEventResponse<DateMemory, ContentUpdatedMultipleResponse>> OnContentCreatedOrUpdatedMultiple(PollingEventRequest<DateMemory> request,
             [PollingEventParameter] PollingContentTypesOptionalFilter filter)
             => HandleContentUpdatedMultipleAsync(request, filter);
 
-        private async Task<PollingEventResponse<DateMemory, ContentUpdatedMultipleResponse>> HandleContentUpdatedMultipleAsync( PollingEventRequest<DateMemory> request,PollingContentTypesOptionalFilter filter)
+        private async Task<PollingEventResponse<DateMemory, ContentUpdatedMultipleResponse>> HandleContentUpdatedMultipleAsync(PollingEventRequest<DateMemory> request, PollingContentTypesOptionalFilter filter)
         {
             var isFirstRun = request.Memory is null;
             var memory = InitializeMemory(request.Memory);
