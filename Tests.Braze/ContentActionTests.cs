@@ -51,12 +51,12 @@ namespace Tests.Braze
 
             await action.UploadContent(new UploadContentRequest
             {
-                ContentType = "canvas",
-                //Locale = "en",
-                ContentId = "58a14503-9626-4e51-8a11-3565cd64eefa",
+                ContentType = "campaign",
+                Locale = "en",
+                ContentId = "dcccf92e-ef27-4cb8-81e9-d988b8be3fa4",
                 //StepId = "1583d01b-b953-42f3-a47e-552d51aad77d",
                 //MessageVariationId = "614cb013-ff1d-40cd-85c2-94676f19b814",
-                Content= new Blackbird.Applications.Sdk.Common.Files.FileReference { Name= "614cb013-ff1d-40cd-85c2-94676f19b814.html" }
+                Content= new Blackbird.Applications.Sdk.Common.Files.FileReference { Name= "5200cf84-f2c2-47fc-84d7-f2094dd6f48e.html" }
             });
             Assert.IsTrue(true);
         }

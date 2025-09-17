@@ -22,7 +22,7 @@ namespace Apps.Braze.Actions
     public class ContentActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : Invocable(invocationContext)
     {
         [BlueprintActionDefinition(BlueprintAction.SearchContent)]
-        [Action("Search content")]
+        [Action("Search content", Description ="Searches the content by the specified content type")]
         public async Task<SearchContentResponse> SearchContent([ActionParameter] SearchContentRequest input)
         {
             if (string.IsNullOrEmpty(input.ContentType))
@@ -55,11 +55,11 @@ namespace Apps.Braze.Actions
 
 
         [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
-        [Action("Download content", Description = "Download Braze content (campaign or canvas) as JSON and HTML.")]
+        [Action("Download content", Description = "Downloads content as JSON and HTML.")]
         public async Task<DownloadContentResponse> DownloadContent([ActionParameter] DownloadContentRequest input)
         {
             if (string.IsNullOrWhiteSpace(input.ContentType))
-                throw new PluginMisconfigurationException("Content type is required (campaign | canvas).");
+                throw new PluginMisconfigurationException("Content type is required (campaign | canvas | email_template).");
 
 
             var type = input.ContentType.Trim().ToLowerInvariant();
@@ -74,7 +74,7 @@ namespace Apps.Braze.Actions
         }
 
         [BlueprintActionDefinition(BlueprintAction.UploadContent)]
-        [Action("Upload content", Description = "Upload Braze content (campaign, canvas, or email_template) from a translated file.")]
+        [Action("Upload content", Description = "Uploads content from a HTML file.")]
         public async Task UploadContent([ActionParameter] UploadContentRequest input)
         {
             if (string.IsNullOrWhiteSpace(input.ContentType))

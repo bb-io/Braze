@@ -1,4 +1,5 @@
-﻿using Apps.Braze.Polling;
+﻿using Apps.Braze.Models.Content;
+using Apps.Braze.Polling;
 using Apps.Braze.Polling.Memory;
 using Blackbird.Applications.Sdk.Common.Polling;
 using Newtonsoft.Json;
@@ -155,6 +156,29 @@ namespace Tests.Braze
                 Console.WriteLine($"{tags.Name} - {tags.Id}");
             }
 
+            Assert.IsNotNull(response);
+        }
+
+
+        [TestMethod]
+        public async Task On_content_updated_working()
+        {
+            var polling = new ContentPollingList(InvocationContext);
+            var request = new PollingEventRequest<DateMemory>
+            {
+                Memory = new DateMemory
+                {
+                    LastInteractionDate = DateTime.UtcNow.AddMonths(-3)
+                }
+            };
+            var campaign = new PollingContentTypesOptionalFilter
+            {
+                ContentTypes = new List<string> { "campaign", "canvas"}
+            };
+
+            var response = await polling.OnContentCreatedOrUpdatedMultiple(request, campaign);
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(response, Formatting.Indented);
+            Console.WriteLine(json);
             Assert.IsNotNull(response);
         }
     }
