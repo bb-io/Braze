@@ -100,19 +100,4 @@ public class CampaignActions(InvocationContext invocationContext, IFileManagemen
 
         await Client.ExecuteWithErrorHandling(updateRequest);
     }
-
-    private async Task<string> ResolveMessageVariationIdAsync(string campaignId, string? messageVariationId)
-    {
-        if (!string.IsNullOrWhiteSpace(messageVariationId))
-            return messageVariationId!;
-
-        var detailsReq = new RestRequest("/campaigns/details", Method.Get);
-        detailsReq.AddQueryParameter("campaign_id", campaignId);
-        var campaign = await Client.ExecuteWithErrorHandling<CampaignDto>(detailsReq);
-
-        var first = campaign.MessageVariations.FirstOrDefault();
-        if (first == null)
-            throw new PluginApplicationException($"No message variations found for campaign '{campaignId}'.");
-        return first.Id;
-    }
 }
