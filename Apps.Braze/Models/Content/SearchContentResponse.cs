@@ -11,11 +11,22 @@ namespace Apps.Braze.Models.Content
 
     public class ContentItem : IDownloadContentInput
     {
-        [Display("Content ID")] public string ContentId { get; set; } = string.Empty;
-        [Display("Content type")] public string ContentType { get; set; }
-        [Display("Name")] public string? Name { get; set; }
-        [Display("Tags")] public IEnumerable<string> Tags { get; set; } = Enumerable.Empty<string>();
-        [Display("Last edited")] public DateTime? LastEdited { get; set; }
-        [Display("Created at")] public DateTime? CreatedAt { get; set; }
+        [Display("Content ID")] 
+        public string ContentId { get; set; } = string.Empty;
+
+        [Display("Content type")] 
+        public string ContentType { get; set; }
+
+        [Display("Name")] 
+        public string? Name { get; set; }
+
+        [Display("Tags")] 
+        public IEnumerable<string> Tags { get; set; } = Enumerable.Empty<string>();
+
+        [Display("Last edited")] 
+        public DateTime? LastEdited { get; set; }
+
+        [Display("Created at")] 
+        public DateTime? CreatedAt { get; set; }
     }
 }

@@ -11,47 +11,62 @@ namespace Apps.Braze.Handlers
 {
     public class ContentDataHandler(InvocationContext invocationContext, [ActionParameter] ContentTypeFilter filter) : Invocable(invocationContext), IAsyncDataSourceItemHandler
     {
-        public async Task<IEnumerable<DataSourceItem>> GetDataAsync(
-       DataSourceContext context, CancellationToken ct)
+        public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(filter.ContentType))
                 throw new PluginMisconfigurationException("Please select 'Content type' first.");
 
             var search = context.SearchString ?? string.Empty;
+            var type = filter.ContentType.Trim().ToLowerInvariant();
 
-            switch (filter.ContentType.Trim().ToLowerInvariant())
+            return type switch
             {
-                case "campaign":
-                    {
-                        var req = new RestRequest("/campaigns/list");
-                        var res = await Client.ExecuteWithErrorHandling<CampaignListDto>(req);
-                        return (res?.Campaigns ?? Enumerable.Empty<ListCampaign>())
-                            .Where(c => string.IsNullOrEmpty(search) || c.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
-                            .Select(c => new DataSourceItem { Value = c.Id, DisplayName = c.Name });
-                    }
-                case "canvas":
-                    {
-                        var req = new RestRequest("/canvas/list");
-                        var res = await Client.ExecuteWithErrorHandling<CanvasListDto>(req);
-                        return (res?.Canvases ?? Enumerable.Empty<CanvasDto>())
-                            .Where(c => string.IsNullOrEmpty(search) || c.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
-                            .Select(c => new DataSourceItem { Value = c.Id, DisplayName = c.Name });
-                    }
-                case "email_template":
-                    {
-                        var req = new RestRequest("/templates/email/list");
-                        req.AddQueryParameter("limit", "20");
-                        var res = await Client.ExecuteWithErrorHandling<EmailTemplateListDto>(req);
+                "campaign" => await GetCampaignsAsync(search),
+                "canvas" => await GetCanvasesAsync(search),
+                "email_template" => await GetEmailTemplatesAsync(search),
+                _ => throw new PluginMisconfigurationException("Unsupported Content type. Valid: campaign | canvas | email_template.")
+            };
+        }
+        
+        private async Task<IEnumerable<DataSourceItem>> GetCampaignsAsync(string search)
+        {
+            var request = new RestRequest("/campaigns/list");
+            var response = await Client.ExecuteWithErrorHandling<CampaignListDto>(request);
 
-                        var list = res?.Templates ?? Enumerable.Empty<ListTemplate>();
-                        return list
-                            .Where(t => string.IsNullOrEmpty(search)
-                                     || t.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
-                            .Select(t => new DataSourceItem { Value = t.Id, DisplayName = t.Name });
-                    }
-                default:
-                    throw new PluginMisconfigurationException("Unsupported Content type. Valid: campaign | canvas | email_template.");
-            }
+            var items = (response?.Campaigns ?? Enumerable.Empty<ListCampaign>())
+                .Where(c => string.IsNullOrEmpty(search)
+                         || (c.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false))
+                .Select(c => new DataSourceItem { Value = c.Id, DisplayName = c.Name });
+
+            return items;
+        }
+
+        private async Task<IEnumerable<DataSourceItem>> GetCanvasesAsync(string search)
+        {
+            var request = new RestRequest("/canvas/list");
+            var response = await Client.ExecuteWithErrorHandling<CanvasListDto>(request);
+
+            var items = (response?.Canvases ?? Enumerable.Empty<CanvasDto>())
+                .Where(c => string.IsNullOrEmpty(search)
+                         || (c.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false))
+                .Select(c => new DataSourceItem { Value = c.Id, DisplayName = c.Name });
+
+            return items;
+        }
+
+        private async Task<IEnumerable<DataSourceItem>> GetEmailTemplatesAsync(string search)
+        {
+            var request = new RestRequest("/templates/email/list");
+            request.AddQueryParameter("limit", "20");
+
+            var response = await Client.ExecuteWithErrorHandling<EmailTemplateListDto>(request);
+
+            var items = (response?.Templates ?? Enumerable.Empty<ListTemplate>())
+                .Where(t => string.IsNullOrEmpty(search)
+                         || (t.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false))
+                .Select(t => new DataSourceItem { Value = t.Id, DisplayName = t.Name });
+
+            return items;
         }
     }
 }

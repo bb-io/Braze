@@ -6,7 +6,7 @@ namespace Apps.Braze.Models.Content
 {
     public class ContentTypeFilter
     {
-        [Display("Content type"), StaticDataSource(typeof(BrazeContentTypeDataSourceHandler))]
-        public virtual string ContentType { get; set; } = default!;
+        [Display("Content type"), StaticDataSource(typeof(ContentTypeDataSourceHandler))]
+        public string ContentType { get; set; } = default!;
     }
 }

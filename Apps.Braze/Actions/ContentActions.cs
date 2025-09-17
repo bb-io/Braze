@@ -22,7 +22,7 @@ namespace Apps.Braze.Actions
     public class ContentActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : Invocable(invocationContext)
     {
         [BlueprintActionDefinition(BlueprintAction.SearchContent)]
-        [Action("Search content", Description ="Searches the content by the specified content type")]
+        [Action("Search content", Description = "Searches the content by the specified content type")]
         public async Task<SearchContentResponse> SearchContent([ActionParameter] SearchContentRequest input)
         {
             if (string.IsNullOrEmpty(input.ContentType))
@@ -35,10 +35,8 @@ namespace Apps.Braze.Actions
             if (input.ContentType.Contains("campaign"))
                 tasks.Add(FetchCampaigns(input.EditedAfter));
 
-
             if (input.ContentType.Contains("canvas"))
                 tasks.Add(FetchCanvases(input.EditedAfter));
-
 
             if (input.ContentType.Contains("email_template"))
                 tasks.Add(FetchEmailTemplates(input.EditedAfter, input.EditedBefore, input.Limit, input.Offset));
@@ -46,13 +44,10 @@ namespace Apps.Braze.Actions
             var results = await Task.WhenAll(tasks);
             var items = results.SelectMany(x => x ?? Enumerable.Empty<ContentItem>()).ToList();
 
-            items = items
-                .OrderByDescending(i => i.LastEdited ?? i.CreatedAt ?? DateTime.MinValue)
-                .ToList();
+            items = items.OrderByDescending(i => i.LastEdited ?? i.CreatedAt ?? DateTime.MinValue).ToList();
 
             return new SearchContentResponse { Items = items };
         }
-
 
         [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
         [Action("Download content", Description = "Downloads content as JSON and HTML.")]
@@ -60,7 +55,6 @@ namespace Apps.Braze.Actions
         {
             if (string.IsNullOrWhiteSpace(input.ContentType))
                 throw new PluginMisconfigurationException("Content type is required (campaign | canvas | email_template).");
-
 
             var type = input.ContentType.Trim().ToLowerInvariant();
             return type switch
@@ -97,101 +91,105 @@ namespace Apps.Braze.Actions
             }
         }
 
-
-        public async Task UploadCampaignAsync(UploadContentRequest input)
+        private async Task UploadCampaignAsync(UploadContentRequest input)
         {
             if (input.Content is null)
                 throw new PluginMisconfigurationException("Content file is required.");
             if (string.IsNullOrWhiteSpace(input.Locale))
                 throw new PluginMisconfigurationException("Locale is required.");
 
-            var (raw, ext) = await ReadContentTextAsync(input.Content);
+            var contentFile = await ReadContentFileAsync(input.Content);
+            var raw = contentFile.Text;
+            var extention = contentFile.Extension;
 
-            var conv = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(ext, fileManagementClient);
-            var (identifier, translationMap) = conv.FromFile(raw);
+            var converter = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(extention, fileManagementClient);
+            var (identifier, translationMap) = converter.FromFile(raw);
 
             var campaignId = input.ContentId ?? identifier?.CampaignId
                 ?? throw new PluginMisconfigurationException("Campaign ID is missing and could not be inferred from the file.");
 
-            var mid = await ResolveMessageVariationIdAsync(campaignId, input.MessageVariationId ?? identifier?.MessageVariationId);
+            var messageVariationId = await ResolveMessageVariationIdAsync(campaignId, input.MessageVariationId ?? identifier?.MessageVariationId);
 
-            var getReq = new RestRequest("/campaigns/translations", Method.Get)
+            var campaignTranslationsRequest = new RestRequest("/campaigns/translations", Method.Get)
                 .AddQueryParameter("campaign_id", campaignId)
-                .AddQueryParameter("message_variation_id", mid);
-            var getRes = await Client.ExecuteWithErrorHandling<TranslationsDto>(getReq);
+                .AddQueryParameter("message_variation_id", messageVariationId);
+            var campaignTranslationsResponse = await Client.ExecuteWithErrorHandling<TranslationsDto>(campaignTranslationsRequest);
 
-            var localeVariant = getRes?.Translations?.FirstOrDefault(x => x.Locale.LocaleKey == input.Locale);
+            var localeVariant = campaignTranslationsResponse?.Translations?.FirstOrDefault(x => x.Locale.LocaleKey == input.Locale);
             if (localeVariant == null)
                 throw new PluginMisconfigurationException($"The locale '{input.Locale}' is not present on this campaign message.");
 
-            var putReq = new RestRequest("/campaigns/translations", Method.Put);
-            putReq.AddJsonBody(new
+            var updateTranslationsRequest = new RestRequest("/campaigns/translations", Method.Put);
+            updateTranslationsRequest.AddJsonBody(new
             {
                 campaign_id = campaignId,
-                message_variation_id = mid,
+                message_variation_id = messageVariationId,
                 locale_id = localeVariant.Locale.Uuid,
                 translation_map = translationMap
             });
 
-            await Client.ExecuteWithErrorHandling(putReq);
+            await Client.ExecuteWithErrorHandling(updateTranslationsRequest);
         }
 
-        public async Task UploadCanvasAsync(UploadContentRequest input)
+        private async Task UploadCanvasAsync(UploadContentRequest input)
         {
             if (input.Content is null)
                 throw new PluginMisconfigurationException("Content file is required.");
             if (string.IsNullOrWhiteSpace(input.Locale))
                 throw new PluginMisconfigurationException("Locale is required.");
 
-            var (raw, ext) = await ReadContentTextAsync(input.Content);
+            var contentFile = await ReadContentFileAsync(input.Content);
+            var raw = contentFile.Text;
+            var extention = contentFile.Extension;
 
-            var conv = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(ext, fileManagementClient);
-            var (identifier, translationMap) = conv.FromFile(raw);
+            var converter = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(extention, fileManagementClient);
+            var (identifier, translationMap) = converter.FromFile(raw);
 
             var canvasId = input.ContentId ?? identifier?.CanvasId
                 ?? throw new PluginMisconfigurationException("Canvas ID is missing and could not be inferred from the file.");
             var stepId = input.StepId ?? identifier?.StepId
                 ?? throw new PluginMisconfigurationException("Step ID is required for canvas uploads (provide explicitly or via file metadata).");
-            var mid = input.MessageVariationId ?? identifier?.MessageVariationId
+            var messageVariationId = input.MessageVariationId ?? identifier?.MessageVariationId
                 ?? throw new PluginMisconfigurationException("Message variation ID is required for canvas uploads (provide explicitly or via file metadata).");
 
-            var getReq = new RestRequest("/canvas/translations")
+            var canvasTranslationsRequest = new RestRequest("/canvas/translations")
                 .AddQueryParameter("workflow_id", canvasId)
                 .AddQueryParameter("step_id", stepId)
-                .AddQueryParameter("message_variation_id", mid);
-            var getRes = await Client.ExecuteWithErrorHandling<TranslationsDto>(getReq);
+                .AddQueryParameter("message_variation_id", messageVariationId);
+            var canvasTranslationsResponse = await Client.ExecuteWithErrorHandling<TranslationsDto>(canvasTranslationsRequest);
 
-            var localeVariant = getRes?.Translations?.FirstOrDefault(x => x.Locale.LocaleKey == input.Locale);
+            var localeVariant = canvasTranslationsResponse?.Translations?.FirstOrDefault(x => x.Locale.LocaleKey == input.Locale);
             if (localeVariant == null)
                 throw new PluginMisconfigurationException($"The locale '{input.Locale}' is not present on this canvas message.");
 
-            var putReq = new RestRequest("/canvas/translations", Method.Put);
-            putReq.AddJsonBody(new
+            var updateTranslationsRequest = new RestRequest("/canvas/translations", Method.Put);
+            updateTranslationsRequest.AddJsonBody(new
             {
                 workflow_id = canvasId,
-                message_variation_id = mid,
+                message_variation_id = messageVariationId,
                 locale_id = localeVariant.Locale.Uuid,
                 step_id = stepId,
                 translation_map = translationMap
             });
 
-            await Client.ExecuteWithErrorHandling(putReq);
+            await Client.ExecuteWithErrorHandling(updateTranslationsRequest);
         }
 
-        public async Task UploadEmailTemplateAsync(UploadContentRequest input)
+        private async Task UploadEmailTemplateAsync(UploadContentRequest input)
         {
             if (input.Content is null)
                 throw new PluginMisconfigurationException("Content file is required.");
             if (string.IsNullOrWhiteSpace(input.ContentId))
                 throw new PluginMisconfigurationException("Email template ID is required for email_template uploads.");
 
-            var (raw, ext) = await ReadContentTextAsync(input.Content);
+            var contentFile = await ReadContentFileAsync(input.Content);
+            var raw = contentFile.Text;
+            var extention = contentFile.Extension;
 
             string html = raw;
-            if (ext.Equals(".json", StringComparison.OrdinalIgnoreCase))
+            if (extention.Equals(".json", StringComparison.OrdinalIgnoreCase))
             {
-                var dto = JsonConvert.DeserializeObject<EmailTemplateDto>(raw)
-                          ?? throw new PluginMisconfigurationException("Invalid JSON uploaded for email_template: deserialization failed.");
+                var dto = JsonConvert.DeserializeObject<EmailTemplateDto>(raw) ?? throw new PluginMisconfigurationException("Invalid JSON uploaded for email_template: deserialization failed.");
                 html = dto.Body ?? string.Empty;
             }
 
@@ -207,7 +205,7 @@ namespace Apps.Braze.Actions
             await Client.ExecuteWithErrorHandling(updateRequest);
         }
 
-        public async Task<(string Text, string Extension)> ReadContentTextAsync(FileReference fileRef)
+        public async Task<ContentFileData> ReadContentFileAsync(FileReference fileRef)
         {
             using var stream = await fileManagementClient.DownloadAsync(fileRef);
             using var ms = new MemoryStream();
@@ -215,20 +213,20 @@ namespace Apps.Braze.Actions
             var bytes = ms.ToArray();
 
             var name = fileRef.Name ?? "content";
-            var ext = Path.GetExtension(name).ToLowerInvariant();
+            var extention = Path.GetExtension(name).ToLowerInvariant();
             var text = Encoding.UTF8.GetString(bytes);
 
             if (Xliff2Serializer.IsXliff2(text))
             {
                 text = Transformation.Parse(text, name).Target().Serialize()
                        ?? throw new PluginMisconfigurationException("XLIFF did not contain files");
-                ext = ".html"; 
+                extention = ".html";
             }
 
-            return (text, ext);
+            return new ContentFileData(text, extention);
         }
 
-        public async Task<DownloadContentResponse> DownloadCampaignAsync(DownloadContentRequest input)
+        private async Task<DownloadContentResponse> DownloadCampaignAsync(DownloadContentRequest input)
         {
             if (string.IsNullOrWhiteSpace(input.ContentId))
                 throw new PluginMisconfigurationException("Content ID is required for campaign downloads.");
@@ -244,8 +242,7 @@ namespace Apps.Braze.Actions
             var result = await Client.ExecuteWithErrorHandling<TranslationsDto>(request);
             var localeVariant = result?.Translations?.FirstOrDefault(x => x.Locale.LocaleKey == input.Locale);
             if (localeVariant == null)
-                throw new PluginMisconfigurationException(
-                    $"The locale '{input.Locale}' is not present on this campaign message.");
+                throw new PluginMisconfigurationException($"The locale '{input.Locale}' is not present on this campaign message.");
 
             var identifier = new CampaignMessageIdentifier
             {
@@ -253,16 +250,16 @@ namespace Apps.Braze.Actions
                 MessageVariationId = mid
             };
 
-            var jsonConv = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(".json", fileManagementClient);
-            var htmlConv = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(".html", fileManagementClient);
+            var jsonConvert = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(".json", fileManagementClient);
+            var htmlConvert = ConverterFactory<CampaignMessageIdentifier>.CreateConverter(".html", fileManagementClient);
 
-            var jsonFile = await jsonConv.ToFile(identifier, localeVariant.TranslationMap);
-            var htmlFile = await htmlConv.ToFile(identifier, localeVariant.TranslationMap);
+            var jsonFile = await jsonConvert.ToFile(identifier, localeVariant.TranslationMap);
+            var htmlFile = await htmlConvert.ToFile(identifier, localeVariant.TranslationMap);
 
             return new DownloadContentResponse { JsonFile = jsonFile, Content = htmlFile };
         }
 
-        public async Task<DownloadContentResponse> DownloadCanvasAsync(DownloadContentRequest input)
+        private async Task<DownloadContentResponse> DownloadCanvasAsync(DownloadContentRequest input)
         {
             if (string.IsNullOrWhiteSpace(input.ContentId))
                 throw new PluginMisconfigurationException("Canvas ID is required for canvas downloads.");
@@ -273,18 +270,15 @@ namespace Apps.Braze.Actions
             if (string.IsNullOrWhiteSpace(input.Locale))
                 throw new PluginMisconfigurationException("Locale is required.");
 
-
             var request = new RestRequest("/canvas/translations")
-            .AddQueryParameter("step_id", input.StepId)
-            .AddQueryParameter("workflow_id", input.ContentId)
-            .AddQueryParameter("message_variation_id", input.MessageVariationId);
-
+                .AddQueryParameter("step_id", input.StepId)
+                .AddQueryParameter("workflow_id", input.ContentId)
+                .AddQueryParameter("message_variation_id", input.MessageVariationId);
 
             var result = await Client.ExecuteWithErrorHandling<TranslationsDto>(request);
             var localeVariant = result?.Translations?.FirstOrDefault(x => x.Locale.LocaleKey == input.Locale);
             if (localeVariant == null)
                 throw new PluginMisconfigurationException($"The locale '{input.Locale}' is not present on this canvas message.");
-
 
             var identifier = new CanvasMessageIdentifier
             {
@@ -293,44 +287,33 @@ namespace Apps.Braze.Actions
                 StepId = input.StepId!
             };
 
+            var jsonConvert = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(".json", fileManagementClient);
+            var htmlConvert = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(".html", fileManagementClient);
 
-            var jsonConv = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(".json", fileManagementClient);
-            var htmlConv = ConverterFactory<CanvasMessageIdentifier>.CreateConverter(".html", fileManagementClient);
-
-
-            var jsonFile = await jsonConv.ToFile(identifier, localeVariant.TranslationMap);
-            var htmlFile = await htmlConv.ToFile(identifier, localeVariant.TranslationMap);
-
+            var jsonFile = await jsonConvert.ToFile(identifier, localeVariant.TranslationMap);
+            var htmlFile = await htmlConvert.ToFile(identifier, localeVariant.TranslationMap);
 
             return new DownloadContentResponse { JsonFile = jsonFile, Content = htmlFile };
         }
 
-        public async Task<DownloadContentResponse> DownloadEmailTemplateAsync(DownloadContentRequest input)
+        private async Task<DownloadContentResponse> DownloadEmailTemplateAsync(DownloadContentRequest input)
         {
             if (string.IsNullOrWhiteSpace(input.ContentId))
-                throw new PluginMisconfigurationException(
-                    "Email template ID is required for email_template downloads.");
+                throw new PluginMisconfigurationException("Email template ID is required for email_template downloads.");
 
             var request = new RestRequest("/templates/email/info");
             request.AddQueryParameter("email_template_id", input.ContentId);
 
             var dto = await Client.ExecuteWithErrorHandling<EmailTemplateDto>(request);
             if (dto == null)
-                throw new PluginApplicationException(
-                    $"Email template '{input.ContentId}' not found. Please check your input and try again.");
+                throw new PluginApplicationException($"Email template '{input.ContentId}' not found. Please check your input and try again.");
 
             var html = dto.Body ?? string.Empty;
             var htmlBytes = Encoding.UTF8.GetBytes(html);
-            var htmlFile = await fileManagementClient.UploadAsync(
-                new MemoryStream(htmlBytes),
-                "text/html",
-                $"{input.ContentId}.html");
+            var htmlFile = await fileManagementClient.UploadAsync(new MemoryStream(htmlBytes), "text/html", $"{input.ContentId}.html");
 
             var json = JsonConvert.SerializeObject(dto);
-            var jsonFile = await fileManagementClient.UploadAsync(
-                new MemoryStream(Encoding.UTF8.GetBytes(json)),
-                "application/json",
-                $"{input.ContentId}.json");
+            var jsonFile = await fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(json)), "application/json", $"{input.ContentId}.json");
 
             return new DownloadContentResponse
             {
@@ -339,22 +322,7 @@ namespace Apps.Braze.Actions
             };
         }
 
-        public async Task<string> ResolveMessageVariationIdAsync(string campaignId, string? messageVariationId)
-        {
-            if (!string.IsNullOrWhiteSpace(messageVariationId))
-                return messageVariationId!;
-
-            var detailsReq = new RestRequest("/campaigns/details", Method.Get);
-            detailsReq.AddQueryParameter("campaign_id", campaignId);
-            var campaign = await Client.ExecuteWithErrorHandling<CampaignDto>(detailsReq);
-
-            var first = campaign.MessageVariations.FirstOrDefault();
-            if (first == null)
-                throw new PluginApplicationException($"No message variations found for campaign '{campaignId}'.");
-            return first.Id;
-        }
-
-        public async Task<IEnumerable<ContentItem>> FetchCampaigns(DateTime? editedAfter)
+        private async Task<IEnumerable<ContentItem>> FetchCampaigns(DateTime? editedAfter)
         {
             var request = new RestRequest("/campaigns/list");
             if (editedAfter.HasValue)
@@ -362,11 +330,11 @@ namespace Apps.Braze.Actions
                 request.AddQueryParameter("last_edit.time[gt]", editedAfter.Value.ToString("yyyy-MM-ddTHH:mm:ss"));
             }
 
-            var res = await Client.ExecuteWithErrorHandling<CampaignListDto>(request);
-            if (res?.Campaigns == null)
+            var response = await Client.ExecuteWithErrorHandling<CampaignListDto>(request);
+            if (response?.Campaigns == null)
                 return Enumerable.Empty<ContentItem>();
 
-            return res.Campaigns.Select(c => new ContentItem
+            return response.Campaigns.Select(c => new ContentItem
             {
                 ContentId = c.Id,
                 ContentType = "campaign",
@@ -376,7 +344,7 @@ namespace Apps.Braze.Actions
             });
         }
 
-        public async Task<IEnumerable<ContentItem>> FetchCanvases(DateTime? editedAfter)
+        private async Task<IEnumerable<ContentItem>> FetchCanvases(DateTime? editedAfter)
         {
             var request = new RestRequest("/canvas/list");
             if (editedAfter.HasValue)
@@ -384,11 +352,11 @@ namespace Apps.Braze.Actions
                 request.AddQueryParameter("last_edit.time[gt]", editedAfter.Value.ToString("yyyy-MM-ddTHH:mm:ss"));
             }
 
-            var res = await Client.ExecuteWithErrorHandling<CanvasListDto>(request);
-            if (res?.Canvases == null)
+            var response = await Client.ExecuteWithErrorHandling<CanvasListDto>(request);
+            if (response?.Canvases == null)
                 return Enumerable.Empty<ContentItem>();
 
-            return res.Canvases.Select(c => new ContentItem
+            return response.Canvases.Select(c => new ContentItem
             {
                 ContentId = c.Id,
                 ContentType = "canvas",
@@ -398,7 +366,7 @@ namespace Apps.Braze.Actions
             });
         }
 
-        public async Task<IEnumerable<ContentItem>> FetchEmailTemplates(DateTime? modifiedAfter, DateTime? modifiedBefore, int? limit, int? offset)
+        private async Task<IEnumerable<ContentItem>> FetchEmailTemplates(DateTime? modifiedAfter, DateTime? modifiedBefore, int? limit, int? offset)
         {
             var request = new RestRequest("/templates/email/list");
 
@@ -422,11 +390,11 @@ namespace Apps.Braze.Actions
                 request.AddQueryParameter("offset", offset.Value.ToString());
             }
 
-            var res = await Client.ExecuteWithErrorHandling<EmailTemplateListDto>(request);
-            if (res?.Templates == null)
+            var response = await Client.ExecuteWithErrorHandling<EmailTemplateListDto>(request);
+            if (response?.Templates == null)
                 return Enumerable.Empty<ContentItem>();
 
-            var templates = res.Templates.ToList();
+            var templates = response.Templates.ToList();
 
             return templates.Select(t => new ContentItem
             {

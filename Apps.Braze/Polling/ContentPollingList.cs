@@ -10,103 +10,41 @@ using RestSharp;
 namespace Apps.Braze.Polling
 {
     [PollingEventList("Content")]
-    public class ContentPollingList : Invocable
+    public class ContentPollingList(InvocationContext invocationContext) : Invocable(invocationContext)
     {
-        public ContentPollingList(InvocationContext invocationContext) : base(invocationContext)
-        {
-        }
-
         [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdatedMultiple)]
-        [PollingEvent("On content updated",
-            Description = "Triggers with a list of campaigns and canvases updated ")]
-        public Task<PollingEventResponse<DateMemory, ContentUpdatedMultipleResponse>> OnContentCreatedOrUpdatedMultiple(
-             PollingEventRequest<DateMemory> request,
-             [PollingEventParameter] PollingContentTypesOptionalFilter filter)
-             => HandleContentUpdatedMultiple(request, filter);
+        [PollingEvent("On content updated",Description = "Triggers with a list of campaigns and canvases updated")]
+        public Task<PollingEventResponse<DateMemory, ContentUpdatedMultipleResponse>> OnContentCreatedOrUpdatedMultiple(PollingEventRequest<DateMemory> request,
+            [PollingEventParameter] PollingContentTypesOptionalFilter filter)
+            => HandleContentUpdatedMultipleAsync(request, filter);
 
-
-        private sealed record UpdatedRow(ContentUpdatedItem Item, DateTime LastEdited);
-
-
-        private async Task<(DateMemory memory, List<UpdatedRow> updated, bool hasUpdates)> FetchUpdatedAsync(PollingEventRequest<DateMemory> request, PollingContentTypesOptionalFilter filter)
+        private async Task<PollingEventResponse<DateMemory, ContentUpdatedMultipleResponse>> HandleContentUpdatedMultipleAsync( PollingEventRequest<DateMemory> request,PollingContentTypesOptionalFilter filter)
         {
-            if (request.Memory is null)
+            var isFirstRun = request.Memory is null;
+            var memory = InitializeMemory(request.Memory);
+            if (isFirstRun)
             {
-                return (new DateMemory { LastInteractionDate = DateTime.UtcNow }, new List<UpdatedRow>(), false);
-            }
-
-            var wantCampaign = filter.ContentTypes == null || filter.ContentTypes.Contains("campaign", StringComparer.OrdinalIgnoreCase);
-            var wantCanvas = filter.ContentTypes == null || filter.ContentTypes.Contains("canvas", StringComparer.OrdinalIgnoreCase);
-
-            var updated = new List<UpdatedRow>();
-            var sinceIso = request.Memory.LastInteractionDate.ToString("o");
-
-            if (wantCampaign)
-            {
-                var campaignsReq = new RestRequest("/campaigns/list", Method.Get)
-                    .AddQueryParameter("last_edit.time[gt]", sinceIso);
-
-                var campaignsRes = await Client.ExecuteWithErrorHandling<CampaignListDto>(campaignsReq);
-                var campaigns = campaignsRes?.Campaigns?.Where(c => c.LastEdited > request.Memory.LastInteractionDate).ToList() ?? new();
-
-                updated.AddRange(
-                   campaigns.Select(c =>
-                   {
-                       var item = new ContentUpdatedItem
-                       {
-                           ContentId = c.Id,
-                           ContentType = "campaign",
-                           Name = c.Name,
-                           LastEdited = c.LastEdited,
-                           Tags = c.Tags,
-                           IsApiCampaign = c.IsApicampaign
-                       };
-                       return new UpdatedRow(item, c.LastEdited);
-                   }));
-            }
-            if (wantCanvas)
-            {
-                var canvasesReq = new RestRequest("/canvas/list", Method.Get)
-                    .AddQueryParameter("last_edit.time[gt]", sinceIso);
-
-                var canvasesRes = await Client.ExecuteWithErrorHandling<CanvasListDto>(canvasesReq);
-                var canvases = canvasesRes?.Canvases?.Where(c => c.LastEdited > request.Memory.LastInteractionDate).ToList() ?? new();
-
-                updated.AddRange(
-            canvases.Select(c =>
-            {
-                var item = new ContentUpdatedItem
-                {
-                    ContentId = c.Id,
-                    ContentType = "canvas",
-                    Name = c.Name,
-                    LastEdited = c.LastEdited,
-                    Tags = c.Tags,
-                };
-                return new UpdatedRow(item, c.LastEdited);
-                }));
-            }
-
-            if (!updated.Any())
-                return (request.Memory, updated, false);
-
-            request.Memory.LastInteractionDate = updated.Max(x => x.LastEdited);
-            return (request.Memory, updated, true);
-        }
-
-        private async Task<PollingEventResponse<DateMemory, ContentUpdatedMultipleResponse>> HandleContentUpdatedMultiple(
-            PollingEventRequest<DateMemory> request, PollingContentTypesOptionalFilter filter)
-        {
-            var (memory, updated, hasUpdates) = await FetchUpdatedAsync(request, filter);
-
-            if (!hasUpdates)
                 return new PollingEventResponse<DateMemory, ContentUpdatedMultipleResponse>
                 {
                     FlyBird = false,
                     Memory = memory
                 };
+            }
 
-            var items = updated
+            var result = await FetchUpdatedAsync(memory, filter);
+
+            if (!result.HasUpdates)
+            {
+                return new PollingEventResponse<DateMemory, ContentUpdatedMultipleResponse>
+                {
+                    FlyBird = false,
+                    Memory = result.Memory
+                };
+            }
+
+            result.Memory.LastInteractionDate = result.Updated.Max(x => x.LastEdited);
+
+            var items = result.Updated
                 .OrderBy(x => x.LastEdited)
                 .Select(x => x.Item)
                 .ToList();
@@ -114,9 +52,66 @@ namespace Apps.Braze.Polling
             return new PollingEventResponse<DateMemory, ContentUpdatedMultipleResponse>
             {
                 FlyBird = true,
-                Memory = memory,
+                Memory = result.Memory,
                 Result = new ContentUpdatedMultipleResponse { Items = items }
             };
+        }
+
+        private async Task<FetchUpdatedResult> FetchUpdatedAsync(DateMemory memory, PollingContentTypesOptionalFilter filter)
+        {
+            var updated = new List<UpdatedRow>();
+            var sinceIso = memory.LastInteractionDate.ToString("o");
+
+            if (IsRequested(filter, "campaign"))
+                updated.AddRange(await GetUpdatedCampaignRowsAsync(sinceIso, memory.LastInteractionDate));
+
+            if (IsRequested(filter, "canvas"))
+                updated.AddRange(await GetUpdatedCanvasRowsAsync(sinceIso, memory.LastInteractionDate));
+
+            return new FetchUpdatedResult(memory, updated);
+        }
+
+        private bool IsRequested(PollingContentTypesOptionalFilter filter, string type) =>
+            filter.ContentTypes == null || filter.ContentTypes.Contains(type, StringComparer.OrdinalIgnoreCase);
+
+        private DateMemory InitializeMemory(DateMemory? previous) =>
+            new() { LastInteractionDate = previous?.LastInteractionDate ?? DateTime.UtcNow };
+
+        private async Task<List<UpdatedRow>> GetUpdatedCampaignRowsAsync(string sinceIso, DateTime threshold)
+        {
+            var requeqst = new RestRequest("/campaigns/list", Method.Get)
+                .AddQueryParameter("last_edit.time[gt]", sinceIso);
+
+            var response = await Client.ExecuteWithErrorHandling<CampaignListDto>(requeqst);
+            var campaigns = response?.Campaigns?.Where(c => c.LastEdited > threshold).ToList() ?? new();
+
+            return campaigns.Select(c => new UpdatedRow(new ContentUpdatedItem
+            {
+                ContentId = c.Id,
+                ContentType = "campaign",
+                Name = c.Name,
+                LastEdited = c.LastEdited,
+                Tags = c.Tags,
+                IsApiCampaign = c.IsApicampaign
+            }, c.LastEdited)).ToList();
+        }
+
+        private async Task<List<UpdatedRow>> GetUpdatedCanvasRowsAsync(string sinceIso, DateTime threshold)
+        {
+            var request = new RestRequest("/canvas/list", Method.Get)
+                .AddQueryParameter("last_edit.time[gt]", sinceIso);
+
+            var response = await Client.ExecuteWithErrorHandling<CanvasListDto>(request);
+            var canvases = response?.Canvases?.Where(c => c.LastEdited > threshold).ToList() ?? new();
+
+            return canvases.Select(c => new UpdatedRow(new ContentUpdatedItem
+            {
+                ContentId = c.Id,
+                ContentType = "canvas",
+                Name = c.Name,
+                LastEdited = c.LastEdited,
+                Tags = c.Tags
+            }, c.LastEdited)).ToList();
         }
     }
 }

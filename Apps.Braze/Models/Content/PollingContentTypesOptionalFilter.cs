@@ -6,7 +6,7 @@ namespace Apps.Braze.Models.Content
 {
     public class PollingContentTypesOptionalFilter
     {
-        [Display("Content types"), StaticDataSource(typeof(BrazeContentTypeDataSourceHandler))]
+        [Display("Content types"), StaticDataSource(typeof(ContentTypeDataSourceHandler))]
         public IEnumerable<string> ContentTypes { get; set; }
     }
 }
