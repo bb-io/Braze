@@ -1,5 +1,4 @@
-﻿using Apps.Braze.Api;
-using Apps.Braze.Dtos;
+﻿using Apps.Braze.Dtos;
 using Apps.Braze.Models.EmailTemplates;
 using Apps.Braze.Services;
 using Blackbird.Applications.Sdk.Common;
@@ -8,14 +7,13 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using RestSharp;
-using System.Net.Mime;
 using System.Text;
 
 namespace Apps.Braze.Actions;
-[ActionList]
+
+[ActionList("Email templates")]
 public class EmailTemplateActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : Invocable(invocationContext)
 {
-
     [Action("Search email templates", Description = "Retrieves a list of email templates filtered by modification dates, limit, and offset.")]
     public async Task<EmailTemplateListDto> SearchEmailTemplates([ActionParameter] SearchEmailTemplatesRequest input)
     {
