@@ -1,4 +1,3 @@
-using Apps.Braze.Constants;
 using Apps.Braze.Dtos;
 using Apps.Braze.Models.Campaigns;
 using Apps.Braze.Services;
@@ -8,15 +7,12 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
-using HtmlAgilityPack;
-using Newtonsoft.Json;
 using RestSharp;
-using System.Net.Mime;
 using System.Text;
 
 namespace Apps.Braze.Actions;
 
-[ActionList]
+[ActionList("Campaigns")]
 public class CampaignActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : Invocable(invocationContext)
 {
     [Action("Search campaigns", Description = "Search through your campaigns")]
