@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Product>Braze</Product>
         <Description>Braze is a customer engagement platform that helps brands deliver personalized, real-time messaging across channels like email, mobile, SMS, and web.</Description>
-        <Version>1.0.17</Version>
+        <Version>1.0.18</Version>
         <AssemblyName>Apps.Braze</AssemblyName>
     </PropertyGroup>
 
