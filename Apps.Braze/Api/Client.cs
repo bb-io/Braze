@@ -23,17 +23,36 @@ public class Client : BlackBirdRestClient
 
     protected override Exception ConfigureErrorException(RestResponse response)
     {
-        if (response.Content == null) return new PluginApplicationException(response.ErrorMessage);
+        if (string.IsNullOrEmpty(response.Content))
+        {
+            if (string.IsNullOrEmpty(response.ErrorMessage))
+            {
+                return new PluginApplicationException($"Unknown error occurred. Status code: {response.StatusCode}, {response.StatusDescription}");
+            }
+            
+            return new PluginApplicationException(response.ErrorMessage);
+        }
 
         if (response.ContentType?.Contains("html") == true || response.Content.TrimStart().StartsWith("<"))
         {
             var htmlErrorMessage = ExtractHtmlErrorMessage(response.Content);
-            return new PluginApplicationException($"Expected JSON but received HTML response. {htmlErrorMessage}");
+            return new PluginApplicationException($"Expected JSON but received HTML ({response.StatusCode}). {htmlErrorMessage}");
         }
 
         var error = JsonConvert.DeserializeObject<ErrorOrMessageDto>(response.Content);
-        if (error.Errors == null || error.Errors.Count() == 0) return new PluginApplicationException(error.Message);
-        return new PluginApplicationException(error.Errors.FirstOrDefault()?.Message);
+        string errorMessage;
+        if (error?.Errors == null || !error.Errors.Any())
+        {
+            errorMessage = !string.IsNullOrWhiteSpace(error?.Message)
+                ? error.Message
+                : $"Unknown error occurred. Status code: {response.StatusCode}, Content: {response.Content}";
+        }
+        else
+        {
+            errorMessage = string.Join("; ", error.Errors.Select(e => e.Message));
+        }
+        
+        return new PluginApplicationException(errorMessage);
     }
 
     public override async Task<T> ExecuteWithErrorHandling<T>(RestRequest request)
@@ -48,31 +67,71 @@ public class Client : BlackBirdRestClient
         return val;
     }
 
-    public override async Task<RestResponse> ExecuteWithErrorHandling(RestRequest request)
+    public override Task<RestResponse> ExecuteWithErrorHandling(RestRequest request)
     {
         int retryCount = 3;
+        return ExecuteWithErrorHandlingAndRetries(request, retryCount);
+    }
+
+    public async Task<RestResponse> ExecuteWithErrorHandlingAndRetries(RestRequest request, int maxRetries)
+    {
         int attempt = 0;
         Exception lastException = null;
 
-        while (attempt < retryCount)
+        while (attempt < maxRetries)
         {
             try
             {
                 RestResponse restResponse = await ExecuteAsync(request);
                 if (!restResponse.IsSuccessStatusCode)
                 {
+                    if ((int)restResponse.StatusCode >= 400 && (int)restResponse.StatusCode < 500)
+                    {
+                        throw ConfigureErrorException(restResponse);
+                    }
+                    
+                    if (attempt < maxRetries - 1)
+                    {
+                        lastException = ConfigureErrorException(restResponse);
+                        attempt++;
+                        
+                        var delayMs = (int)Math.Pow(2, attempt) * 1000;
+                        if (restResponse.Headers != null && restResponse.Headers.Any(h => h.Name != null && h.Name.Equals("Retry-After", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            var retryAfterHeader = restResponse.Headers.First(h => h.Name != null && h.Name.Equals("Retry-After", StringComparison.OrdinalIgnoreCase));
+                            if (int.TryParse(retryAfterHeader.Value?.ToString(), out int retryAfterSeconds))
+                            {
+                                delayMs = retryAfterSeconds * 1000;
+                            }
+                        }
+                        
+                        await Task.Delay(delayMs);
+                        continue;
+                    }
+                    
                     throw ConfigureErrorException(restResponse);
                 }
+                
                 return restResponse;
+            }
+            catch (PluginApplicationException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
                 lastException = ex;
                 attempt++;
-
+                
+                if (attempt < maxRetries)
+                {
+                    var delayMs = (int)Math.Pow(2, attempt) * 1000;
+                    await Task.Delay(delayMs);
+                }
             }
         }
-        throw lastException;
+        
+        throw lastException ?? new Exception("Request failed after retries with no exception captured");
     }
 
     private string ExtractHtmlErrorMessage(string htmlContent)
@@ -96,7 +155,7 @@ public class Client : BlackBirdRestClient
                 @"<div[^>]*>(.*?)</div>"
             };
 
-            string errorMessage = null;
+            string? errorMessage = null;
             foreach (var pattern in errorPatterns)
             {
                 var match = Regex.Match(htmlContent, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
