@@ -62,7 +62,7 @@ public class HandlerTests : TestBase
     [TestMethod]
     public async Task Message_variation_handler_works()
     {
-        var handler = new MessageVariationDataHandler(InvocationContext, new CampaignRequest { CampaignId= "80fa4d32-60fa-497e-a0e4-dcc2db212baf" });
+        var handler = new MessageVariationDataHandler(InvocationContext, new CampaignRequest { CampaignId= "26f1f0f1-d699-49cb-8414-a820de622c5e" });
 
         var result = await handler.GetDataAsync(new DataSourceContext { }, CancellationToken.None);
 
