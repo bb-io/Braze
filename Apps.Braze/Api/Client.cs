@@ -15,10 +15,12 @@ public class Client : BlackBirdRestClient
     public Client(IEnumerable<AuthenticationCredentialsProvider> creds) : base(new()
     {
         BaseUrl = new Uri(creds.Get(CredsNames.BaseUrl).Value),
-        MaxTimeout = 120000
+        MaxTimeout = 120000,
+        UserAgent = "partner-Blackbird"
     })
     {
         this.AddDefaultHeader("Authorization", $"Bearer {creds.Get(CredsNames.Key).Value}");
+
     }
 
     protected override Exception ConfigureErrorException(RestResponse response)

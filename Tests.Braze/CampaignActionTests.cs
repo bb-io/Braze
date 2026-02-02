@@ -23,7 +23,7 @@ public class CampaignActionTests : TestBase
     public async Task Search_campaigns_with_last_edited_works()
     {
         var actions = new CampaignActions(InvocationContext, FileManager);
-        var result = await actions.SearchCampaigns(new SearchCampaignsRequest { LastEdited = new DateTime(2025, 4, 6) });
+        var result = await actions.SearchCampaigns(new SearchCampaignsRequest { LastEdited = new DateTime(2025, 12, 1) });
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
         Assert.IsTrue(result.Campaigns.Count() > 0);
     }
