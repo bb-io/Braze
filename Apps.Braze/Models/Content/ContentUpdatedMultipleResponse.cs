@@ -3,10 +3,10 @@ using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
 
 namespace Apps.Braze.Models.Content
 {
-    public class ContentUpdatedMultipleResponse
+    public class ContentUpdatedMultipleResponse : IMultiDownloadableContentOutput<ContentUpdatedItem>
     {
         [Display("Items")]
-        public IEnumerable<ContentUpdatedItem> Items { get; set; } = Enumerable.Empty<ContentUpdatedItem>();
+        public List<ContentUpdatedItem> Items { get; set; } = [];
     }
 
     public class ContentUpdatedItem : IDownloadContentInput
