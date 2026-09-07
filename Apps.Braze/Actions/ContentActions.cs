@@ -2,6 +2,7 @@
 using Apps.Braze.Models.Campaigns;
 using Apps.Braze.Models.Canvas;
 using Apps.Braze.Models.Content;
+using Apps.Braze.Models.ContentBlocks;
 using Apps.Braze.Services;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
@@ -41,6 +42,9 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         if (input.ContentType.Contains("email_template"))
             tasks.Add(FetchEmailTemplates(input.EditedAfter, input.EditedBefore, input.Limit, input.Offset));
 
+        if (input.ContentType.Contains("content_block"))
+            tasks.Add(FetchContentBlocks(input.EditedAfter, input.EditedBefore));
+
         var results = await Task.WhenAll(tasks);
         var items = results.SelectMany(x => x ?? Enumerable.Empty<ContentItem>()).ToList();
 
@@ -50,11 +54,11 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     }
 
     [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
-    [Action("Download content", Description = "Downloads content as JSON and HTML.")]
+    [Action("Download content", Description = "Downloads content as a content file and JSON.")]
     public async Task<DownloadContentResponse> DownloadContent([ActionParameter] DownloadContentRequest input)
     {
         if (string.IsNullOrWhiteSpace(input.ContentType))
-            throw new PluginMisconfigurationException("Content type is required (campaign | canvas | email_template).");
+            throw new PluginMisconfigurationException("Content type is required (campaign | canvas | email_template | content_block).");
 
         var type = input.ContentType.Trim().ToLowerInvariant();
         return type switch
@@ -62,17 +66,19 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             "campaign" => await DownloadCampaignAsync(input),
             "canvas" => await DownloadCanvasAsync(input),
             "email_template" => await DownloadEmailTemplateAsync(input),
+            "content_block" => await new ContentBlockActions(InvocationContext, fileManagementClient)
+                .DownloadContentBlock(new ContentBlockRequest { ContentBlockId = input.ContentId }),
             _ => throw new PluginMisconfigurationException(
-                "Unsupported content type. Valid: campaign | canvas | email_template.")
+                "Unsupported content type. Valid: campaign | canvas | email_template | content_block.")
         };
     }
 
     [BlueprintActionDefinition(BlueprintAction.UploadContent)]
-    [Action("Upload content", Description = "Uploads content from a HTML file.")]
+    [Action("Upload content", Description = "Uploads content from a supported content file.")]
     public async Task UploadContent([ActionParameter] UploadContentRequest input)
     {
         if (string.IsNullOrWhiteSpace(input.ContentType))
-            throw new PluginMisconfigurationException("Content type is required (campaign | canvas | email_template).");
+            throw new PluginMisconfigurationException("Content type is required (campaign | canvas | email_template | content_block).");
 
         var type = input.ContentType.Trim().ToLowerInvariant();
         switch (type)
@@ -86,8 +92,16 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             case "email_template":
                 await UploadEmailTemplateAsync(input);
                 break;
+            case "content_block":
+                await new ContentBlockActions(InvocationContext, fileManagementClient)
+                    .UploadContentBlock(new UploadContentBlockRequest
+                    {
+                        ContentBlockId = input.ContentId ?? string.Empty,
+                        Content = input.Content
+                    });
+                break;
             default:
-                throw new PluginMisconfigurationException("Unsupported content type. Valid: campaign | canvas | email_template.");
+                throw new PluginMisconfigurationException("Unsupported content type. Valid: campaign | canvas | email_template | content_block.");
         }
     }
 
@@ -404,6 +418,28 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             Tags = t.Tags ?? Enumerable.Empty<string>(),
             CreatedAt = t.CreatedAt,
             LastEdited = t.UpdatedAt
+        });
+    }
+
+    private async Task<IEnumerable<ContentItem>> FetchContentBlocks(
+        DateTime? modifiedAfter,
+        DateTime? modifiedBefore)
+    {
+        var response = await new ContentBlockActions(InvocationContext, fileManagementClient)
+            .SearchContentBlocks(new SearchContentBlocksRequest
+            {
+                ModifiedAfter = modifiedAfter,
+                ModifiedBefore = modifiedBefore
+            });
+
+        return response.ContentBlocks.Select(block => new ContentItem
+        {
+            ContentId = block.ContentBlockId,
+            ContentType = "content_block",
+            Name = block.Name,
+            Tags = block.Tags,
+            CreatedAt = block.CreatedAt,
+            LastEdited = block.LastEdited
         });
     }
 }

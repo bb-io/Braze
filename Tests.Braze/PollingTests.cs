@@ -173,10 +173,50 @@ namespace Tests.Braze
             };
             var campaign = new PollingContentTypesOptionalFilter
             {
-                ContentTypes = new List<string> { "campaign", "canvas"}
+                ContentTypes = new List<string> { "content_block" }
             };
 
             var response = await polling.OnContentCreatedOrUpdatedMultiple(request, campaign);
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(response, Formatting.Indented);
+            Console.WriteLine(json);
+            Assert.IsNotNull(response);
+        }
+
+        [TestMethod]
+        public async Task On_content_block_updated_working()
+        {
+            var polling = new ContentBlockPollingList(InvocationContext);
+            var request = new PollingEventRequest<DateMemory>
+            {
+                Memory = new DateMemory
+                {
+                    LastInteractionDate = DateTime.UtcNow.AddMonths(-3)
+                }
+            };
+
+            var response = await polling.OnContentBlockUpdated(request);
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(response, Formatting.Indented);
+            Console.WriteLine(json);
+            Assert.IsNotNull(response);
+        }
+
+        [TestMethod]
+        public async Task On_content_block_tag_added_working()
+        {
+            var polling = new ContentBlockPollingList(InvocationContext);
+            var request = new PollingEventRequest<DateMemory>
+            {
+                Memory = new DateMemory
+                {
+                    LastInteractionDate = DateTime.UtcNow.AddMonths(-3)
+                }
+            };
+            var campaign = new PollingContentBlockRequest
+            {
+                Tags = new List<string> { "email" }
+            };
+
+            var response = await polling.OnContentBlockTagAdded(request, campaign);
             var json = Newtonsoft.Json.JsonConvert.SerializeObject(response, Formatting.Indented);
             Console.WriteLine(json);
             Assert.IsNotNull(response);

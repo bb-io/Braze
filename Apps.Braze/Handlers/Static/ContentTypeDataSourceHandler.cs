@@ -11,7 +11,8 @@ namespace Apps.Braze.Handlers.Static
             {
                 new() { Value = "campaign", DisplayName = "Campaign" },
                 new() { Value = "canvas", DisplayName = "Canvas" },
-                new() { Value = "email_template", DisplayName = "Email Template" }
+                new() { Value = "email_template", DisplayName = "Email Template" },
+                new() { Value = "content_block", DisplayName = "Content Block" }
             };
         }
     }
