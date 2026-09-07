@@ -1,6 +1,7 @@
 ﻿using Apps.Braze.Dtos;
 using Apps.Braze.Models.Canvas;
 using Apps.Braze.Models.Content;
+using Apps.Braze.Models.ContentBlocks;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Exceptions;
@@ -24,7 +25,8 @@ namespace Apps.Braze.Handlers
                 "campaign" => await GetCampaignsAsync(search),
                 "canvas" => await GetCanvasesAsync(search),
                 "email_template" => await GetEmailTemplatesAsync(search),
-                _ => throw new PluginMisconfigurationException("Unsupported Content type. Valid: campaign | canvas | email_template.")
+                "content_block" => await GetContentBlocksAsync(search),
+                _ => throw new PluginMisconfigurationException("Unsupported Content type. Valid: campaign | canvas | email_template | content_block.")
             };
         }
         
@@ -67,6 +69,40 @@ namespace Apps.Braze.Handlers
                 .Select(t => new DataSourceItem { Value = t.Id, DisplayName = t.Name });
 
             return items;
+        }
+
+        private async Task<IEnumerable<DataSourceItem>> GetContentBlocksAsync(string search)
+        {
+            const int pageSize = 1000;
+            var offset = 0;
+            var contentBlocks = new List<ContentBlockListItem>();
+
+            while (true)
+            {
+                var request = new RestRequest("/content_blocks/list")
+                    .AddQueryParameter("limit", pageSize.ToString());
+                if (offset > 0)
+                    request.AddQueryParameter("offset", offset.ToString());
+
+                var response = await Client.ExecuteWithErrorHandling<ContentBlockListResponse>(request);
+                var page = (response.ContentBlocks ?? []).ToList();
+                contentBlocks.AddRange(page);
+
+                if (page.Count < pageSize)
+                    break;
+
+                offset += pageSize;
+            }
+
+            return contentBlocks
+                .Where(block => string.IsNullOrEmpty(search)
+                                || block.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(block => block.Name)
+                .Select(block => new DataSourceItem
+                {
+                    Value = block.ContentBlockId,
+                    DisplayName = block.Name
+                });
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Apps.Braze.Dtos;
 using Apps.Braze.Models.Canvas;
 using Apps.Braze.Models.Content;
+using Apps.Braze.Models.ContentBlocks;
 using Apps.Braze.Polling.Memory;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
@@ -13,7 +14,7 @@ namespace Apps.Braze.Polling
     public class ContentPollingList(InvocationContext invocationContext) : Invocable(invocationContext)
     {
         [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdatedMultiple)]
-        [PollingEvent("On content updated", Description = "Triggers with a list of campaigns and canvases updated")]
+        [PollingEvent("On content updated", Description = "Triggers with a list of campaigns, canvases, and content blocks updated")]
         public Task<PollingEventResponse<DateMemory, ContentUpdatedMultipleResponse>> OnContentCreatedOrUpdatedMultiple(PollingEventRequest<DateMemory> request,
             [PollingEventParameter] PollingContentTypesOptionalFilter filter)
             => HandleContentUpdatedMultipleAsync(request, filter);
@@ -68,6 +69,9 @@ namespace Apps.Braze.Polling
             if (IsRequested(filter, "canvas"))
                 updated.AddRange(await GetUpdatedCanvasRowsAsync(sinceIso, memory.LastInteractionDate));
 
+            if (IsRequested(filter, "content_block"))
+                updated.AddRange(await GetUpdatedContentBlockRowsAsync(sinceIso, memory.LastInteractionDate));
+
             return new FetchUpdatedResult(memory, updated);
         }
 
@@ -112,6 +116,43 @@ namespace Apps.Braze.Polling
                 LastEdited = c.LastEdited,
                 Tags = c.Tags
             }, c.LastEdited)).ToList();
+        }
+
+        private async Task<List<UpdatedRow>> GetUpdatedContentBlockRowsAsync(string sinceIso, DateTime threshold)
+        {
+            const int pageSize = 1000;
+            var offset = 0;
+            var contentBlocks = new List<ContentBlockListItem>();
+
+            while (true)
+            {
+                var request = new RestRequest("/content_blocks/list", Method.Get)
+                    .AddQueryParameter("modified_after", sinceIso)
+                    .AddQueryParameter("limit", pageSize.ToString());
+                if (offset > 0)
+                    request.AddQueryParameter("offset", offset.ToString());
+
+                var response = await Client.ExecuteWithErrorHandling<ContentBlockListResponse>(request);
+                var page = (response.ContentBlocks ?? []).ToList();
+                contentBlocks.AddRange(page);
+
+                if (page.Count < pageSize)
+                    break;
+
+                offset += pageSize;
+            }
+
+            return contentBlocks
+                .Where(block => block.LastEdited > threshold)
+                .Select(block => new UpdatedRow(new ContentUpdatedItem
+                {
+                    ContentId = block.ContentBlockId,
+                    ContentType = "content_block",
+                    Name = block.Name,
+                    LastEdited = block.LastEdited,
+                    Tags = block.Tags
+                }, block.LastEdited))
+                .ToList();
         }
     }
 }

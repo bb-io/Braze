@@ -14,7 +14,7 @@ namespace Tests.Braze
 
             var result = await action.SearchContent(new()
             {
-                ContentType = "canvas",
+                ContentType = "content_block",  //Test_content_block
                 EditedAfter = DateTime.UtcNow.AddYears(-1)
             });
 
@@ -31,9 +31,9 @@ namespace Tests.Braze
 
             var result = await action.DownloadContent(new DownloadContentRequest
             {
-                ContentType = "email_template",
+                ContentType = "content_block",
                 Locale = "en",
-                ContentId = "f26f01ae-628a-4781-a55e-76a07373bde0",
+                ContentId = "1b5055c3-790f-47a6-93af-31561dee68b0",
                 //StepId = "1583d01b-b953-42f3-a47e-552d51aad77d",
                 //MessageVariationId = "614cb013-ff1d-40cd-85c2-94676f19b814",
             });
@@ -51,12 +51,12 @@ namespace Tests.Braze
 
             await action.UploadContent(new UploadContentRequest
             {
-                ContentType = "campaign",
-                Locale = "en",
-                ContentId = "dcccf92e-ef27-4cb8-81e9-d988b8be3fa4",
+                ContentType = "content_block",
+                //Locale = "en",
+                ContentId = "1b5055c3-790f-47a6-93af-31561dee68b0",
                 //StepId = "1583d01b-b953-42f3-a47e-552d51aad77d",
                 //MessageVariationId = "614cb013-ff1d-40cd-85c2-94676f19b814",
-                Content= new Blackbird.Applications.Sdk.Common.Files.FileReference { Name= "5200cf84-f2c2-47fc-84d7-f2094dd6f48e.html" }
+                Content= new Blackbird.Applications.Sdk.Common.Files.FileReference { Name= "1b5055c3-790f-47a6-93af-31561dee68b0.html" }
             });
             Assert.IsTrue(true);
         }
