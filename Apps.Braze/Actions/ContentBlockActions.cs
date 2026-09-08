@@ -65,17 +65,14 @@ public class ContentBlockActions(
         return await Client.ExecuteWithErrorHandling<ContentBlockInfo>(request);
     }
 
-    [Action("Download content block", Description = "Downloads a content block as a content file and JSON snapshot.")]
+    [Action("Download content block", Description = "Downloads a content block as HTML and JSON files.")]
     public async Task<DownloadContentResponse> DownloadContentBlock([ActionParameter] ContentBlockRequest input)
     {
         var contentBlock = await GetContentBlock(input);
-        var isHtml = string.Equals(contentBlock.ContentType, "html", StringComparison.OrdinalIgnoreCase);
-        var extension = isHtml ? ".html" : ".txt";
-        var mimeType = isHtml ? "text/html" : "text/plain";
 
         var contentBytes = Encoding.UTF8.GetBytes(contentBlock.Content ?? string.Empty);
         var contentFile = await fileManagementClient.UploadAsync(
-            new MemoryStream(contentBytes), mimeType, $"{contentBlock.ContentBlockId}{extension}");
+            new MemoryStream(contentBytes), "text/html", $"{contentBlock.ContentBlockId}.html");
 
         var json = JsonConvert.SerializeObject(contentBlock, Formatting.Indented);
         var jsonFile = await fileManagementClient.UploadAsync(

@@ -24,6 +24,8 @@ Before you can connect you need to make sure that:
 - Create an API key under Settings > APIs and identifiers > API Keys > Create
   API Key.
   - Under permissions grant all permissions for _Campaigns_ and _Canvas_
+  - To use Content Block actions and events, also grant
+    `content_blocks.list`, `content_blocks.info`, and `content_blocks.update`
 
 ## Connecting
 
@@ -65,19 +67,33 @@ Before you can connect you need to make sure that:
 
 ### Email templates
 
-- **Search email templates** returns the email template metadata** Retrieves a list of email templates filtered by modification dates, limit, and offset
+- **Search email templates** retrieves a list of email templates filtered by
+  modification dates, limit, and offset
 - **Create email template** creates a new email template
-- **Get email template** retrieves information about an email template, including the body as HTML
+- **Get email template** retrieves information about an email template,
+  including the body as HTML
 - **Add tags to email template** adds tags to an email template
 - **Remove tags from email template** removes tags from an email template
 - **Update email template** updates an email template
 
+### Content blocks
+
+- **Search content blocks** retrieves all Content Blocks, optionally filtered by
+  modification dates.
+- **Get content block** retrieves Content Block metadata and its HTML or JSON
+  content.
+- **Download content block** downloads the content as both HTML and JSON files
+- **Upload content block** updates the content of an existing Content Block from
+  an HTML, text, JSON snapshot, or XLIFF file. The maximum supported content size
+  is 50 KB
+
 ### Content
 
-- **Search content** Searches the content by the specified content type
-- **Download content** Downloads content as JSON and HTML
-- **Upload content** Uploads content from a HTML file
-
+- **Search content** searches campaigns, Canvases, email templates, or Content
+  Blocks.
+- **Download content** downloads the selected content as a content file and JSON
+- **Upload content** uploads a supported content file. Use `content_block` as the
+  content type to update an existing Content Block
 
 ### Events
 
@@ -87,7 +103,16 @@ Before you can connect you need to make sure that:
   added
 - **On campaign message translation added or updated** triggers when a campaign message translation is added or updated. If a message hasn't been updated in over a year, this event will trigger again for that message. Please note: if the translation update results in a duplicate translation ID error from the `/campaigns/translations` API, the event will not be triggered
 - **On canvas message tag added** triggers when a canvas message tag is added
-- **On content updated** triggers when content is updated
+- **On email template tag added** triggers when an email template with one of
+  the specified tags is updated
+- **On content block updated** triggers when one or more Content Blocks are
+  updated
+- **On content block tag added** triggers when a Content Block matching the
+  optional Content Block ID and tag filters is updated. When multiple tags are
+  supplied, matching any one of them is sufficient
+- **On content updated** triggers when campaigns, Canvases, or Content Blocks are
+  updated. The content type filter accepts `campaign`, `canvas`, and
+  `content_block`
 
 ## Example
 
